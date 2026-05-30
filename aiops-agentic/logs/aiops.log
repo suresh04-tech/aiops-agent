@@ -1,0 +1,327 @@
+============================================================
+2026-05-29 12:58:22,163 [INFO] app.processor.process_incident — INCIDENT PROCESSOR v3 STARTED
+2026-05-29 12:58:22,164 [INFO] app.processor.process_incident — ============================================================
+2026-05-29 12:58:30,876 [INFO] app.processor.process_incident — [Load] incident=6554e9eb-2206-487a-a7c6-c4229356f496 | project='AIOps Production' tag=aiops-prod | region=us-east-1
+2026-05-29 12:58:33,363 [INFO] app.utils.aws_connector — [AWSClientFactory] Loaded credentials for project 'aiops-prod' region=us-east-1
+2026-05-29 12:58:33,366 [INFO] app.processor.process_incident — [Tools] Initialised for 6554e9eb-2206-487a-a7c6-c4229356f496
+2026-05-29 12:58:33,367 [INFO] app.processor.process_incident — [Status] 6554e9eb-2206-487a-a7c6-c4229356f496 → triage_started (10%)
+2026-05-29 12:58:37,256 [INFO] app.processor.dependency_resolver — [ALB resolver] Matched DNS 'aiops-alb-1937945577.us-east-1.elb.amazonaws.com' → ARN 'arn:aws:elasticloadbalancing:us-east-1:369606757523:loadbalancer/app/aiops-alb/55261edb7427e571'
+2026-05-29 12:58:37,839 [INFO] app.processor.dependency_resolver — [ALB resolver] Found target i-01cbe3e1e9e371033 state=healthy reason=None
+2026-05-29 12:58:37,840 [INFO] app.processor.dependency_resolver — [ALB resolver] Found target i-0d7409065a555843e state=healthy reason=None
+2026-05-29 12:58:37,841 [INFO] app.processor.dependency_resolver — [ALB resolver] Total targets for ALB: 2
+2026-05-29 12:58:37,843 [INFO] app.processor.dependency_resolver — [DependencyResolver] Resolved 1 dep(s) → 2 unique EC2 target(s): ['i-01cbe3e1e9e371033', 'i-0d7409065a555843e']
+2026-05-29 12:58:37,843 [INFO] app.processor.process_incident — [PreTriage] No short-circuit — full investigation
+2026-05-29 12:58:37,844 [INFO] app.processor.process_incident — [PreSignals] No primary root cause extracted pre-LLM
+2026-05-29 12:58:40,157 [INFO] app.processor.process_incident — [Status] 6554e9eb-2206-487a-a7c6-c4229356f496 → infra_analysis (30%)
+2026-05-29 12:58:42,700 [INFO] app.agent.graph — [Agent] Starting investigation for incident 6554e9eb-2206-487a-a7c6-c4229356f496
+2026-05-29 12:58:44,962 [INFO] app.utils.aws_connector — [BedrockClientFactory] Loaded Bedrock credentials region=ap-south-1
+2026-05-29 12:58:45,270 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
+2026-05-29 12:58:46,334 [INFO] app.agent.graph — [Agent] turn complete | tool_calls=1
+2026-05-29 12:58:46,339 [INFO] app.agent.graph — [ToolNode] resolve_incident_targets | args={}
+2026-05-29 12:58:47,719 [INFO] app.processor.dependency_resolver — [ALB resolver] Matched DNS 'aiops-alb-1937945577.us-east-1.elb.amazonaws.com' → ARN 'arn:aws:elasticloadbalancing:us-east-1:369606757523:loadbalancer/app/aiops-alb/55261edb7427e571'
+2026-05-29 12:58:48,286 [INFO] app.processor.dependency_resolver — [ALB resolver] Found target i-01cbe3e1e9e371033 state=healthy reason=None
+2026-05-29 12:58:48,287 [INFO] app.processor.dependency_resolver — [ALB resolver] Found target i-0d7409065a555843e state=healthy reason=None
+2026-05-29 12:58:48,290 [INFO] app.processor.dependency_resolver — [ALB resolver] Total targets for ALB: 2
+2026-05-29 12:58:48,293 [INFO] app.processor.dependency_resolver — [DependencyResolver] Resolved 1 dep(s) → 2 unique EC2 target(s): ['i-01cbe3e1e9e371033', 'i-0d7409065a555843e']
+2026-05-29 12:58:48,294 [INFO] app.agent.graph — [ToolNode] resolve_incident_targets result: {"targets": [{"instance_id": "i-01cbe3e1e9e371033", "region": "us-east-1", "log_groups": ["alike-prod-backend-app-logs", "alike-prod-backend-logs", "alike-prod-backend-system-logs"], "target_health": "healthy", "target_reason": ""}, {"instance_id": "i-0d7409065a555843e", "region": "us-east-1", "log_groups": ["alike-prod-backend-app-logs", "alike-prod-backend-logs", "alike-prod-backend-system-logs"], "target_health": "healthy", "target_reason": ""}], "alb_meta": {"alb_dns": "aiops-alb-1937945577.us-east-1.elb.amazonaws.com", "alb_arn": "arn:aws:elasticloadbalancing:us-east-1:369606757523:loadbalancer/app/aiops-alb/55261edb7427e571", "targets": [{"instance_id": "i-01cbe3e1e9e371033", "health": "healthy", "reason": "", "description": "", "target_group_arn": "arn:aws:elasticloadbalancing:us-east-1:369606757523:targetgroup/aiops-target-group/73715f318e60517d"}, {"instance_id": "i-0d7409065a555843e", "health": "healthy", "reason": "", "description": "", "target_group_arn": "arn:aws:elasticloadbalancing:us-east-1:369606757523:targetgroup/aiops-target-group/73715f318e60517d"}], "total": 2, "healthy": 2, "unhealthy": 0}}
+2026-05-29 12:58:48,298 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
+2026-05-29 12:58:49,826 [INFO] app.agent.graph — [Agent] turn complete | tool_calls=1
+2026-05-29 12:58:49,831 [INFO] app.agent.graph — [ToolNode] get_ec2_analysis | args={"instance_ids": ["i-01cbe3e1e9e371033", "i-0d7409065a555843e"]}
+2026-05-29 12:58:49,838 [INFO] app.processor.process_incident — [Status] 6554e9eb-2206-487a-a7c6-c4229356f496 → infra_analysis (30%)
+2026-05-29 12:58:58,452 [INFO] app.agent.graph — [ToolNode] get_ec2_analysis result: {"instances": {"i-01cbe3e1e9e371033": {"details": {"instance_id": "i-01cbe3e1e9e371033", "instance_type": "t3.micro", "state": "running", "private_ip": "172.31.22.201", "public_ip": "54.196.160.33", "availability_zone": "us-east-1c", "launch_time": "2026-05-29 06:00:43+00:00", "ami_id": "ami-091138d0f0d41ff90", "security_groups": [{"id": "sg-02dc2192e316318b4", "name": "launch-wizard-10"}], "tags": {"Created_by": "suresh", "Project": "Aiops", "Name": "Alike-prod-backend", "Created_for": "testing"}}, "status_checks": {"instance_status": "ok", "system_status": "ok"}, "metrics": {"cpu_percent": 1.0583393526290814, "network_in_bytes": 50906.0, "network_out_bytes": 56623.666666666664, "disk_read_ops": null, "disk_write_ops": null, "status_check_failed": 0.0, "window_minutes": 15}}, "i-0d7409065a555843e": {"details": {"instance_id": "i-0d7409065a555843e", "instance_type": "t3.micro", "state": "running", "private_ip": "172.31.3.63", "public_ip": "44.204.202.104", "availability_zone": "us-east-1a", "launch_time": "2026-05-29 06:00:43+00:00", "ami_id": "ami-091138d0f0d41ff90", "security_groups": [{"id": "sg-04f1675ba6b3bff6e", "name": "launch-wizard-12"}], "tags": {"Name": "aiops-test", "Created_by": "suresh", "Created_for": "aiops-test", "Project": "meyiconnect-Aiops"}}, "status_checks": {"instance_status": "ok", "system_status": "ok"}, "metrics": {"cpu_percent": 1.143763982830724, "network_in_bytes": 27894.0, "network_out_bytes": 33582.75, "disk_read_ops": null, "disk_write_ops": null, "status_check_failed": 0.0, "window_minutes": 15}}}}
+2026-05-29 12:58:58,459 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
+2026-05-29 12:59:00,142 [INFO] app.agent.graph — [Agent] turn complete | tool_calls=1
+2026-05-29 12:59:00,147 [INFO] app.agent.graph — [ToolNode] get_compressed_logs | args={"log_groups": ["alike-prod-backend-app-logs", "alike-prod-backend-logs", "alike-prod-backend-system-logs"]}
+2026-05-29 12:59:00,149 [INFO] app.processor.process_incident — [Status] 6554e9eb-2206-487a-a7c6-c4229356f496 → logs_analysis (60%)
+2026-05-29 12:59:05,663 [INFO] app.processor.log_processor — [Start] down_time=07:14:29 | window=-30min/+10min | groups=['alike-prod-backend-app-logs', 'alike-prod-backend-logs', 'alike-prod-backend-system-logs']
+2026-05-29 12:59:06,793 [INFO] app.processor.log_processor — [CW] alike-prod-backend-logs: 0 events in 1 page(s)
+2026-05-29 12:59:06,796 [INFO] app.processor.log_processor — [Phase-A] alike-prod-backend-logs: 0/0 error events [06:44 – 07:24]
+2026-05-29 12:59:09,451 [INFO] app.processor.log_processor — [CW] alike-prod-backend-app-logs: 599 events in 2 page(s)
+2026-05-29 12:59:09,504 [INFO] app.processor.log_processor — [Phase-A] alike-prod-backend-app-logs: 28/599 error events [06:44 – 07:24]
+2026-05-29 12:59:10,234 [INFO] app.processor.log_processor — [CW] alike-prod-backend-system-logs: 335 events in 2 page(s)
+2026-05-29 12:59:10,256 [INFO] app.processor.log_processor — [Phase-A] alike-prod-backend-system-logs: 6/335 error events [06:44 – 07:24]
+2026-05-29 12:59:10,259 [INFO] app.processor.log_processor — [Phase-A] 34 total error events
+2026-05-29 12:59:10,261 [INFO] app.processor.log_processor — [Phase-B] Found sustained spike starting at 07:14:23 with 33 errors in 5m
+2026-05-29 12:59:10,262 [INFO] app.processor.log_processor — [Phase-B] First error: 07:14:23 in alike-prod-backend-app-logs | true_start anchored → 07:09:23
+2026-05-29 12:59:10,263 [INFO] app.processor.log_processor — [Timeline Stages]
+  buildup: 07:09:23 → 07:14:23
+  failure: 07:14:23 → 07:14:29
+  impact: 07:14:29 → 07:24:29
+2026-05-29 12:59:10,766 [INFO] app.processor.log_processor — [CW] alike-prod-backend-app-logs: 13 events in 2 page(s)
+2026-05-29 12:59:10,770 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-app-logs / failure: 13 lines [07:14 – 07:14]
+2026-05-29 12:59:10,833 [INFO] app.processor.log_processor — [CW] alike-prod-backend-app-logs: 52 events in 2 page(s)
+2026-05-29 12:59:10,838 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-app-logs / buildup: 52 lines [07:09 – 07:14]
+2026-05-29 12:59:11,259 [INFO] app.processor.log_processor — [CW] alike-prod-backend-logs: 0 events in 1 page(s)
+2026-05-29 12:59:11,260 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-logs / impact: 0 lines [07:14 – 07:24]
+2026-05-29 12:59:11,322 [INFO] app.processor.log_processor — [CW] alike-prod-backend-logs: 0 events in 1 page(s)
+2026-05-29 12:59:11,324 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-logs / failure: 0 lines [07:14 – 07:14]
+2026-05-29 12:59:11,687 [INFO] app.processor.log_processor — [CW] alike-prod-backend-system-logs: 30 events in 2 page(s)
+2026-05-29 12:59:11,690 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-system-logs / buildup: 30 lines [07:09 – 07:14]
+2026-05-29 12:59:11,713 [INFO] app.processor.log_processor — [CW] alike-prod-backend-app-logs: 289 events in 2 page(s)
+2026-05-29 12:59:11,718 [INFO] app.processor.log_processor — [CW] alike-prod-backend-logs: 0 events in 1 page(s)
+2026-05-29 12:59:11,720 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-app-logs / impact: 289 lines [07:14 – 07:24]
+2026-05-29 12:59:11,725 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-logs / buildup: 0 lines [07:09 – 07:14]
+2026-05-29 12:59:11,815 [INFO] app.processor.log_processor — [CW] alike-prod-backend-system-logs: 3 events in 2 page(s)
+2026-05-29 12:59:11,816 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-system-logs / failure: 3 lines [07:14 – 07:14]
+2026-05-29 12:59:13,750 [INFO] app.processor.log_processor — [CW] alike-prod-backend-system-logs: 156 events in 2 page(s)
+2026-05-29 12:59:13,752 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-system-logs / impact: 156 lines [07:14 – 07:24]
+2026-05-29 12:59:13,794 [INFO] app.processor.log_processor — [Top Error Signals]
+  • [RARE-HIGH-SIGNAL] [EXCEPTION] Traceback (most recent call last):
+  File "/home/ubuntu/aiops-testcase/app.py", line 149, in get_incidents
+    with get_db() as conn:
+         ~~~~~~^^
+  File "/usr/lib/python3.14/contextlib.py", line 141, in __enter__
+    return next(self.gen)
+  File "/home/ubuntu/aiops-testcase/app.py", line 48, i
+  • [x3] [EXCEPTION] Traceback (most recent call last):
+  File "/home/ubuntu/aiops-testcase/app.py", line 192, in get_incident_details
+    with get_db() as conn:
+         ~~~~~~^^
+  File "/usr/lib/python3.14/contextlib.py", line 141, in __enter__
+    return next(self.gen)
+  File "/home/ubuntu/aiops-testcase/app.py", lin
+  • [x6] [GENERIC-ERROR] psycopg2.ProgrammingError: invalid dsn: missing "=" after "pstgresql://meyiconnect_test_aiops_user:9UqSVbvQMMPK7ANn5SpYQagT6HifUJys@dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com/meyiconnect_test_aiops" in connection info string
+  • [HTTP-500] 2026-05-29 07:14:23,047 INFO request_completed request_id=b1a57b18-6ea7-48e5-bd55-dc340b80832b status_code=500 duration_ms=1
+  • [HTTP-500] 2026-05-29 07:14:29,280 INFO request_completed request_id=64f32086-f8e5-4736-8a62-60c4458db871 status_code=500 duration_ms=1
+  • [HTTP-500] 2026-05-29 07:14:31,875 INFO request_completed request_id=17f04add-b5fa-42c6-a35e-fe9095e29010 status_code=500 duration_ms=1
+  • [HTTP-500] 2026-05-29 07:14:35,902 INFO request_completed request_id=5661c592-5745-45d5-a796-2af31b9eabb6 status_code=500 duration_ms=1
+  • [HTTP-500] 2026-05-29 07:14:47,429 INFO request_completed request_id=42bf7e6a-6f13-4591-a69b-7aad701630f0 status_code=500 duration_ms=3
+  • [HTTP-500] 2026-05-29 07:14:52,517 INFO request_completed request_id=88fb15ea-a932-4773-9f0a-64777ae01e22 status_code=500 duration_ms=1
+  • [HTTP-500] 2026-05-29 07:17:38,915 INFO request_completed request_id=2d6eae30-693c-473a-8a94-fee6b241bd19 status_code=500 duration_ms=2
+2026-05-29 12:59:13,796 [INFO] app.processor.log_processor — [Done] groups=3 stages=3 total_raw=543 top_errors=10
+2026-05-29 12:59:13,803 [INFO] app.agent.graph — [ToolNode] get_compressed_logs result: {"adaptive_window": {"before_minutes": 30, "after_minutes": 10}, "anchor": {"true_start": "2026-05-29T07:09:23.263000+00:00", "first_error_ts": "2026-05-29T07:14:23.263000+00:00", "first_error_msg": "2026-05-29 07:14:23,046 ERROR failed_to_fetch_incidents", "first_error_group": "alike-prod-backend-app-logs", "first_error_weight": 15}, "top_errors": ["[RARE-HIGH-SIGNAL] [EXCEPTION] Traceback (most recent call last):\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 149, in get_incidents\n    with get_db() as conn:\n         ~~~~~~^^\n  File \"/usr/lib/python3.14/contextlib.py\", line 141, in __enter__\n    return next(self.gen)\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 48, i", "[x3] [EXCEPTION] Traceback (most recent call last):\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 192, in get_incident_details\n    with get_db() as conn:\n         ~~~~~~^^\n  File \"/usr/lib/python3.14/contextlib.py\", line 141, in __enter__\n    return next(self.gen)\n  File \"/home/ubuntu/aiops-testcase/app.py\", lin", "[x6] [GENERIC-ERROR] psycopg2.ProgrammingError: invalid dsn: missing \"=\" after \"pstgresql://meyiconnect_test_aiops_user:9UqSVbvQMMPK7ANn5SpYQagT6HifUJys@dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com/meyiconnect_test_aiops\" in connection info string", "[HTTP-500] 2026-05-29 07:14:23,047 INFO request_completed request_id=b1a57b18-6ea7-48e5-bd55-dc340b80832b status_code=500 duration_ms=1", "[HTTP-500] 2026-05-29 07:14:29,280 INFO request_completed request_id=64f32086-f8e5-4736-8a62-60c4458db871 status_code=500 duration_ms=1", "[HTTP-500] 2026-05-29 07:14:31,875 INFO request_completed request_id=17f04add-b5fa-42c6-a35e-fe9095e29010 status_code=500 duration_ms=1", "[HTTP-500] 2026-05-29 07:14:35,902 INFO request_completed request_id=5661c592-5745-45d5-a796-2af31b9eabb6 status_code=500 duration_ms=1", "[HTTP-500] 2026-05-29 07:14:47,429 INFO request_completed request_id=42bf7e6a-6f13-4591-a69b-7aad701630f0 status_code=500 duration_ms=3"], "total_raw_lines": 543, "group_summaries": {"alike-prod-backend-app-logs": {"buildup": {"stage_label": "Pre-failure buildup", "window": "07:09 \u2013 07:14", "total_raw": 52, "error_count": 3, "warn_count": 0, "top_clusters": [{"level": "error", "count": 1, "weight_label": "exception", "is_rare": true, "cascade_suspect": false, "upstream_services": [], "sample": "Traceback (most recent call last):\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 149, in get_incidents\n    with get_db() as conn:\n         ~~~~~~^^\n  File \"/usr/lib/python3.14/contextlib.py\", line"}, {"level": "error", "count": 1, "weight_label": "generic-error", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "2026-05-29 07:14:23,046 ERROR failed_to_fetch_incidents"}, {"level": "error", "count": 1, "weight_label": "generic-error", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "psycopg2.ProgrammingError: invalid dsn: missing \"=\" after \"pstgresql://meyiconnect_test_aiops_user:9UqSVbvQMMPK7ANn5SpYQagT6HifUJys@dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com/meyiconnect_"}]}, "failure": {"stage_label": "Failure propagation", "window": "07:14 \u2013 07:14", "total_raw": 13, "error_count": 7, "warn_count": 0, "top_clusters": [{"level": "error", "count": 2, "weight_label": "exception", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "Traceback (most recent call last):\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 149, in get_incidents\n    with get_db() as conn:\n         ~~~~~~^^\n  File \"/usr/lib/python3.14/contextlib.py\", line"}, {"level": "error", "count": 1, "weight_label": "http-500", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "2026-05-29 07:14:23,047 INFO request_completed request_id=b1a57b18-6ea7-48e5-bd55-dc340b80832b status_code=500 duration_ms=1"}, {"level": "error", "count": 2, "weight_label": "generic-error", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "2026-05-29 07:14:23,046 ERROR failed_to_fetch_incidents"}, {"level": "error", "count": 2, "weight_label": "generic-error", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "psycopg2.ProgrammingError: invalid dsn: missing \"=\" after \"pstgresql://meyiconnect_test_aiops_user:9UqSVbvQMMPK7ANn5SpYQagT6HifUJys@dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com/meyiconnect_"}]}, "impact": {"stage_label": "Impact / recovery", "window": "07:14 \u2013 07:24", "total_raw": 289, "error_count": 24, "warn_count": 0, "top_clusters": [{"level": "error", "count": 3, "weight_label": "exception", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "Traceback (most recent call last):\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 149, in get_incidents\n    with get_db() as conn:\n         ~~~~~~^^\n  File \"/usr/lib/python3.14/contextlib.py\", line"}, {"level": "error", "count": 3, "weight_label": "exception", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "Traceback (most recent call last):\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 192, in get_incident_details\n    with get_db() as conn:\n         ~~~~~~^^\n  File \"/usr/lib/python3.14/contextlib.py"}, {"level": "error", "count": 6, "weight_label": "generic-error", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "psycopg2.ProgrammingError: invalid dsn: missing \"=\" after \"pstgresql://meyiconnect_test_aiops_user:9UqSVbvQMMPK7ANn5SpYQagT6HifUJys@dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com/meyiconnect_"}, {"level": "error", "count": 1, "weight_label": "http-500", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "2026-05-29 07:14:29,280 INFO request_completed request_id=64f32086-f8e5-4736-8a62-60c4458db871 status_code=500 duration_ms=1"}, {"level": "error", "count": 1, "weight_label": "http-500", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "2026-05-29 07:14:31,875 INFO request_completed request_id=17f04add-b5fa-42c6-a35e-fe9095e29010 status_code=500 duration_ms=1"}]}}, "alike-prod-backend-logs": {"buildup": {"stage_label": "Pre-failure buildup", "window": "07:09 \u2013 07:14", "total_raw": 0, "error_count": 0, "warn_count": 0, "top_clusters": []}, "failure": {"stage_label": "Failure propagation", "window": "07:14 \u2013 07:14", "total_raw": 0, "error_count": 0, "warn_count": 0, "top_clusters": []}, "impact": {"stage_label": "Impact / recovery", "window": "07:14 \u2013 07:24", "total_raw": 0, "error_count": 0, "warn_count": 0, "top_clusters": []}}, "alike-prod-backend-system-logs": {"buildup": {"stage_label": "Pre-failure buildup", "window": "07:09 \u2013 07:14", "total_raw": 30, "error_count": 0, "warn_count": 0, "top_clusters": []}, "failure": {"stage_label": "Failure propagation", "window": "07:14 \u2013 07:14", "total_raw": 3, "error_count": 0, "warn_count": 0, "top_clusters": []}, "impact": {"stage_label": "Impact / recovery", "window": "07:14 \u2013 07:24", "total_raw": 156, "error_count": 0, "warn_count": 0, "top_clusters": []}}}}
+2026-05-29 12:59:13,810 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
+2026-05-29 12:59:22,111 [INFO] app.agent.graph — [Agent] turn complete | tool_calls=1
+2026-05-29 12:59:22,118 [INFO] app.agent.graph — [StopCondition] Early stop — High-confidence primary RCA 'database_config_error' (93%) confirmed by EC2 + logs.
+2026-05-29 12:59:22,122 [WARNING] app.agent.graph — [Agent] No JSON from LLM — falling back to deterministic signals
+2026-05-29 12:59:22,123 [INFO] app.agent.graph — [Agent] Complete | incident=6554e9eb-2206-487a-a7c6-c4229356f496 | messages=9 | tool_calls=4 | structured=yes
+2026-05-29 12:59:22,130 [INFO] app.processor.process_incident — [Agent] Finished | tool_calls=4 | messages=9 | early_exit=False | structured=yes
+2026-05-29 12:59:22,134 [INFO] app.processor.process_incident — [Status] 6554e9eb-2206-487a-a7c6-c4229356f496 → remediation_generated (90%)
+2026-05-29 12:59:26,737 [INFO] app.processor.process_incident — [SaveRCA] Updated 1 row(s) for 6554e9eb-2206-487a-a7c6-c4229356f496
+2026-05-29 12:59:26,994 [INFO] app.processor.process_incident — ============================================================
+2026-05-29 12:59:26,995 [INFO] app.processor.process_incident — INCIDENT COMPLETED: 6554e9eb-2206-487a-a7c6-c4229356f496
+2026-05-29 12:59:26,996 [INFO] app.processor.process_incident — ============================================================
+2026-05-29 12:59:26,999 [INFO] app.processor.worker — [Worker] Completed incident_id=6554e9eb-2206-487a-a7c6-c4229356f496
+2026-05-29 13:02:06,771 [INFO] app.main — Shutting down worker...
+2026-05-29 13:02:24,879 [INFO] app.main — Starting incident processor worker...
+2026-05-29 13:02:24,880 [INFO] app.processor.worker — [Worker] Incident processor worker started.
+2026-05-29 13:02:28,976 [INFO] app.queue.manager — [Queue] Enqueued incident_id=6554e9eb-2206-487a-a7c6-c4229356f496 | queue_size=1
+2026-05-29 13:02:28,977 [INFO] app.api.routes.queue — [/queue/enqueue] incident_id=6554e9eb-2206-487a-a7c6-c4229356f496 accepted
+2026-05-29 13:02:28,978 [INFO] app.processor.worker — [Worker] Picked up incident_id=6554e9eb-2206-487a-a7c6-c4229356f496
+2026-05-29 13:02:28,980 [INFO] app.processor.process_incident — 
+
+
+
+
+
+============================================================
+2026-05-29 13:02:28,981 [INFO] app.processor.process_incident — INCIDENT PROCESSOR v3 STARTED
+2026-05-29 13:02:28,981 [INFO] app.processor.process_incident — ============================================================
+2026-05-29 13:02:37,105 [INFO] app.processor.process_incident — [Load] incident=6554e9eb-2206-487a-a7c6-c4229356f496 | project='AIOps Production' tag=aiops-prod | region=us-east-1
+2026-05-29 13:02:39,269 [INFO] app.utils.aws_connector — [AWSClientFactory] Loaded credentials for project 'aiops-prod' region=us-east-1
+2026-05-29 13:02:39,270 [INFO] app.processor.process_incident — [Tools] Initialised for 6554e9eb-2206-487a-a7c6-c4229356f496
+2026-05-29 13:02:39,270 [INFO] app.processor.process_incident — [Status] 6554e9eb-2206-487a-a7c6-c4229356f496 → triage_started (10%)
+2026-05-29 13:02:43,447 [INFO] app.processor.dependency_resolver — [ALB resolver] Matched DNS 'aiops-alb-1937945577.us-east-1.elb.amazonaws.com' → ARN 'arn:aws:elasticloadbalancing:us-east-1:369606757523:loadbalancer/app/aiops-alb/55261edb7427e571'
+2026-05-29 13:02:43,987 [INFO] app.processor.dependency_resolver — [ALB resolver] Found target i-01cbe3e1e9e371033 state=healthy reason=None
+2026-05-29 13:02:43,988 [INFO] app.processor.dependency_resolver — [ALB resolver] Found target i-0d7409065a555843e state=healthy reason=None
+2026-05-29 13:02:43,988 [INFO] app.processor.dependency_resolver — [ALB resolver] Total targets for ALB: 2
+2026-05-29 13:02:43,989 [INFO] app.processor.dependency_resolver — [DependencyResolver] Resolved 1 dep(s) → 2 unique EC2 target(s): ['i-01cbe3e1e9e371033', 'i-0d7409065a555843e']
+2026-05-29 13:02:43,990 [INFO] app.processor.process_incident — [PreTriage] No short-circuit — full investigation
+2026-05-29 13:02:43,990 [INFO] app.processor.process_incident — [PreSignals] No primary root cause extracted pre-LLM
+2026-05-29 13:02:46,057 [INFO] app.processor.process_incident — [Status] 6554e9eb-2206-487a-a7c6-c4229356f496 → infra_analysis (30%)
+2026-05-29 13:02:48,473 [INFO] app.agent.graph — [Agent] Starting investigation for incident 6554e9eb-2206-487a-a7c6-c4229356f496
+2026-05-29 13:02:50,491 [INFO] app.utils.aws_connector — [BedrockClientFactory] Loaded Bedrock credentials region=ap-south-1
+2026-05-29 13:02:50,577 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
+2026-05-29 13:02:51,870 [INFO] app.agent.graph — [Agent] turn complete | tool_calls=1
+2026-05-29 13:02:51,871 [INFO] app.agent.graph — [ToolNode] resolve_incident_targets | args={"dependencies": [{"type": "alb", "region": "us-east-1", "resource_id": "aiops-alb-1937945577.us-east-1.elb.amazonaws.com", "log_group_name": ["alike-prod-backend-app-logs", "alike-prod-backend-logs", "alike-prod-backend-system-logs"]}]}
+2026-05-29 13:02:53,196 [INFO] app.processor.dependency_resolver — [ALB resolver] Matched DNS 'aiops-alb-1937945577.us-east-1.elb.amazonaws.com' → ARN 'arn:aws:elasticloadbalancing:us-east-1:369606757523:loadbalancer/app/aiops-alb/55261edb7427e571'
+2026-05-29 13:02:53,761 [INFO] app.processor.dependency_resolver — [ALB resolver] Found target i-01cbe3e1e9e371033 state=healthy reason=None
+2026-05-29 13:02:53,763 [INFO] app.processor.dependency_resolver — [ALB resolver] Found target i-0d7409065a555843e state=healthy reason=None
+2026-05-29 13:02:53,766 [INFO] app.processor.dependency_resolver — [ALB resolver] Total targets for ALB: 2
+2026-05-29 13:02:53,767 [INFO] app.processor.dependency_resolver — [DependencyResolver] Resolved 1 dep(s) → 2 unique EC2 target(s): ['i-01cbe3e1e9e371033', 'i-0d7409065a555843e']
+2026-05-29 13:02:53,769 [INFO] app.agent.graph — [ToolNode] resolve_incident_targets result: {"targets": [{"instance_id": "i-01cbe3e1e9e371033", "region": "us-east-1", "log_groups": ["alike-prod-backend-app-logs", "alike-prod-backend-logs", "alike-prod-backend-system-logs"], "target_health": "healthy", "target_reason": ""}, {"instance_id": "i-0d7409065a555843e", "region": "us-east-1", "log_groups": ["alike-prod-backend-app-logs", "alike-prod-backend-logs", "alike-prod-backend-system-logs"], "target_health": "healthy", "target_reason": ""}], "alb_meta": {"alb_dns": "aiops-alb-1937945577.
+2026-05-29 13:02:53,771 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
+2026-05-29 13:02:55,304 [INFO] app.agent.graph — [Agent] turn complete | tool_calls=1
+2026-05-29 13:02:55,305 [INFO] app.agent.graph — [ToolNode] get_ec2_analysis | args={"instance_ids": ["i-01cbe3e1e9e371033", "i-0d7409065a555843e"], "region": "us-east-1"}
+2026-05-29 13:02:55,305 [INFO] app.processor.process_incident — [Status] 6554e9eb-2206-487a-a7c6-c4229356f496 → infra_analysis (30%)
+2026-05-29 13:03:03,677 [INFO] app.agent.graph — [ToolNode] get_ec2_analysis result: {"instances": {"i-01cbe3e1e9e371033": {"details": {"instance_id": "i-01cbe3e1e9e371033", "instance_type": "t3.micro", "state": "running", "private_ip": "172.31.22.201", "public_ip": "54.196.160.33", "availability_zone": "us-east-1c", "launch_time": "2026-05-29 06:00:43+00:00", "ami_id": "ami-091138d0f0d41ff90", "security_groups": [{"id": "sg-02dc2192e316318b4", "name": "launch-wizard-10"}], "tags": {"Created_by": "suresh", "Project": "Aiops", "Name": "Alike-prod-backend", "Created_for": "testing
+2026-05-29 13:03:03,686 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
+2026-05-29 13:03:05,550 [INFO] app.agent.graph — [Agent] turn complete | tool_calls=1
+2026-05-29 13:03:05,552 [INFO] app.agent.graph — [ToolNode] get_compressed_logs | args={"log_groups": ["alike-prod-backend-app-logs", "alike-prod-backend-logs", "alike-prod-backend-system-logs"], "region": "us-east-1"}
+2026-05-29 13:03:05,555 [INFO] app.processor.process_incident — [Status] 6554e9eb-2206-487a-a7c6-c4229356f496 → logs_analysis (60%)
+2026-05-29 13:03:08,099 [INFO] app.processor.log_processor — [Start] down_time=07:14:29 | window=-30min/+10min | groups=['alike-prod-backend-app-logs', 'alike-prod-backend-logs', 'alike-prod-backend-system-logs']
+2026-05-29 13:03:09,158 [INFO] app.processor.log_processor — [CW] alike-prod-backend-logs: 0 events in 1 page(s)
+2026-05-29 13:03:09,159 [INFO] app.processor.log_processor — [Phase-A] alike-prod-backend-logs: 0/0 error events [06:44 – 07:24]
+2026-05-29 13:03:14,303 [INFO] app.processor.log_processor — [CW] alike-prod-backend-system-logs: 335 events in 2 page(s)
+2026-05-29 13:03:14,313 [INFO] app.processor.log_processor — [Phase-A] alike-prod-backend-system-logs: 6/335 error events [06:44 – 07:24]
+2026-05-29 13:03:16,065 [INFO] app.processor.log_processor — [CW] alike-prod-backend-app-logs: 599 events in 2 page(s)
+2026-05-29 13:03:16,114 [INFO] app.processor.log_processor — [Phase-A] alike-prod-backend-app-logs: 28/599 error events [06:44 – 07:24]
+2026-05-29 13:03:16,116 [INFO] app.processor.log_processor — [Phase-A] 34 total error events
+2026-05-29 13:03:16,117 [INFO] app.processor.log_processor — [Phase-B] Found sustained spike starting at 07:14:23 with 33 errors in 5m
+2026-05-29 13:03:16,117 [INFO] app.processor.log_processor — [Phase-B] First error: 07:14:23 in alike-prod-backend-app-logs | true_start anchored → 07:09:23
+2026-05-29 13:03:16,118 [INFO] app.processor.log_processor — [Timeline Stages]
+  buildup: 07:09:23 → 07:14:23
+  failure: 07:14:23 → 07:14:29
+  impact: 07:14:29 → 07:24:29
+2026-05-29 13:03:16,683 [INFO] app.processor.log_processor — [CW] alike-prod-backend-app-logs: 13 events in 2 page(s)
+2026-05-29 13:03:16,685 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-app-logs / failure: 13 lines [07:14 – 07:14]
+2026-05-29 13:03:16,952 [INFO] app.processor.log_processor — [CW] alike-prod-backend-app-logs: 52 events in 2 page(s)
+2026-05-29 13:03:16,954 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-app-logs / buildup: 52 lines [07:09 – 07:14]
+2026-05-29 13:03:17,190 [INFO] app.processor.log_processor — [CW] alike-prod-backend-logs: 0 events in 1 page(s)
+2026-05-29 13:03:17,191 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-logs / buildup: 0 lines [07:09 – 07:14]
+2026-05-29 13:03:17,197 [INFO] app.processor.log_processor — [CW] alike-prod-backend-app-logs: 289 events in 2 page(s)
+2026-05-29 13:03:17,199 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-app-logs / impact: 289 lines [07:14 – 07:24]
+2026-05-29 13:03:17,219 [INFO] app.processor.log_processor — [CW] alike-prod-backend-logs: 0 events in 1 page(s)
+2026-05-29 13:03:17,220 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-logs / failure: 0 lines [07:14 – 07:14]
+2026-05-29 13:03:17,506 [INFO] app.processor.log_processor — [CW] alike-prod-backend-system-logs: 30 events in 2 page(s)
+2026-05-29 13:03:17,508 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-system-logs / buildup: 30 lines [07:09 – 07:14]
+2026-05-29 13:03:17,676 [INFO] app.processor.log_processor — [CW] alike-prod-backend-system-logs: 156 events in 2 page(s)
+2026-05-29 13:03:17,677 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-system-logs / impact: 156 lines [07:14 – 07:24]
+2026-05-29 13:03:17,717 [INFO] app.processor.log_processor — [CW] alike-prod-backend-system-logs: 3 events in 2 page(s)
+2026-05-29 13:03:17,718 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-system-logs / failure: 3 lines [07:14 – 07:14]
+2026-05-29 13:03:17,965 [INFO] app.processor.log_processor — [CW] alike-prod-backend-logs: 0 events in 1 page(s)
+2026-05-29 13:03:17,966 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-logs / impact: 0 lines [07:14 – 07:24]
+2026-05-29 13:03:17,988 [INFO] app.processor.log_processor — [Top Error Signals]
+  • [RARE-HIGH-SIGNAL] [EXCEPTION] Traceback (most recent call last):
+  File "/home/ubuntu/aiops-testcase/app.py", line 149, in get_incidents
+    with get_db() as conn:
+         ~~~~~~^^
+  File "/usr/lib/python3.14/contextlib.py", line 141, in __enter__
+    return next(self.gen)
+  File "/home/ubuntu/aiops-testcase/app.py", line 48, i
+  • [x3] [EXCEPTION] Traceback (most recent call last):
+  File "/home/ubuntu/aiops-testcase/app.py", line 192, in get_incident_details
+    with get_db() as conn:
+         ~~~~~~^^
+  File "/usr/lib/python3.14/contextlib.py", line 141, in __enter__
+    return next(self.gen)
+  File "/home/ubuntu/aiops-testcase/app.py", lin
+  • [x6] [GENERIC-ERROR] psycopg2.ProgrammingError: invalid dsn: missing "=" after "pstgresql://meyiconnect_test_aiops_user:9UqSVbvQMMPK7ANn5SpYQagT6HifUJys@dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com/meyiconnect_test_aiops" in connection info string
+  • [HTTP-500] 2026-05-29 07:14:23,047 INFO request_completed request_id=b1a57b18-6ea7-48e5-bd55-dc340b80832b status_code=500 duration_ms=1
+  • [HTTP-500] 2026-05-29 07:14:29,280 INFO request_completed request_id=64f32086-f8e5-4736-8a62-60c4458db871 status_code=500 duration_ms=1
+  • [HTTP-500] 2026-05-29 07:14:31,875 INFO request_completed request_id=17f04add-b5fa-42c6-a35e-fe9095e29010 status_code=500 duration_ms=1
+  • [HTTP-500] 2026-05-29 07:14:35,902 INFO request_completed request_id=5661c592-5745-45d5-a796-2af31b9eabb6 status_code=500 duration_ms=1
+  • [HTTP-500] 2026-05-29 07:14:47,429 INFO request_completed request_id=42bf7e6a-6f13-4591-a69b-7aad701630f0 status_code=500 duration_ms=3
+  • [HTTP-500] 2026-05-29 07:14:52,517 INFO request_completed request_id=88fb15ea-a932-4773-9f0a-64777ae01e22 status_code=500 duration_ms=1
+  • [HTTP-500] 2026-05-29 07:17:38,915 INFO request_completed request_id=2d6eae30-693c-473a-8a94-fee6b241bd19 status_code=500 duration_ms=2
+2026-05-29 13:03:17,990 [INFO] app.processor.log_processor — [Done] groups=3 stages=3 total_raw=543 top_errors=10
+2026-05-29 13:03:17,995 [INFO] app.agent.graph — [ToolNode] get_compressed_logs result: {"adaptive_window": {"before_minutes": 30, "after_minutes": 10}, "anchor": {"true_start": "2026-05-29T07:09:23.263000+00:00", "first_error_ts": "2026-05-29T07:14:23.263000+00:00", "first_error_msg": "2026-05-29 07:14:23,046 ERROR failed_to_fetch_incidents", "first_error_group": "alike-prod-backend-app-logs", "first_error_weight": 15}, "top_errors": ["[RARE-HIGH-SIGNAL] [EXCEPTION] Traceback (most recent call last):\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 149, in get_incidents\n    w
+2026-05-29 13:03:17,997 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
+2026-05-29 13:03:22,003 [INFO] app.agent.graph — [Agent] turn complete | tool_calls=0
+2026-05-29 13:03:22,007 [INFO] app.agent.graph — [Agent] ReAct loop done | incident=6554e9eb-2206-487a-a7c6-c4229356f496 | messages=9 | tool_calls=3
+2026-05-29 13:03:24,176 [INFO] app.utils.aws_connector — [BedrockClientFactory] Loaded Bedrock credentials region=ap-south-1
+2026-05-29 13:03:24,526 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
+2026-05-29 13:03:26,550 [INFO] app.agent.graph — [Agent] Complete | incident=6554e9eb-2206-487a-a7c6-c4229356f496 | structured=yes
+2026-05-29 13:03:26,564 [INFO] app.processor.process_incident — [Agent] Finished | tool_calls=3 | messages=9 | early_exit=False | structured=yes
+2026-05-29 13:03:26,569 [INFO] app.processor.process_incident — [Status] 6554e9eb-2206-487a-a7c6-c4229356f496 → remediation_generated (90%)
+2026-05-29 13:03:30,443 [INFO] app.processor.process_incident — [SaveRCA] Updated 1 row(s) for 6554e9eb-2206-487a-a7c6-c4229356f496
+2026-05-29 13:03:30,677 [INFO] app.processor.process_incident — ============================================================
+2026-05-29 13:03:30,679 [INFO] app.processor.process_incident — INCIDENT COMPLETED: 6554e9eb-2206-487a-a7c6-c4229356f496
+2026-05-29 13:03:30,687 [INFO] app.processor.process_incident — ============================================================
+2026-05-29 13:03:30,689 [INFO] app.processor.worker — [Worker] Completed incident_id=6554e9eb-2206-487a-a7c6-c4229356f496
+2026-05-30 05:00:32,809 [INFO] app.main — Shutting down worker...
+2026-05-30 05:00:53,307 [INFO] app.main — Starting incident processor worker...
+2026-05-30 05:00:53,308 [INFO] app.processor.worker — [Worker] Incident processor worker started.
+2026-05-30 05:08:13,221 [INFO] app.queue.manager — [Queue] Enqueued incident_id=6554e9eb-2206-487a-a7c6-c4229356f496 | queue_size=1
+2026-05-30 05:08:13,256 [INFO] app.api.routes.queue — [/queue/enqueue] incident_id=6554e9eb-2206-487a-a7c6-c4229356f496 accepted
+2026-05-30 05:08:13,295 [INFO] app.processor.worker — [Worker] Picked up incident_id=6554e9eb-2206-487a-a7c6-c4229356f496
+2026-05-30 05:08:13,362 [INFO] app.processor.process_incident — ============================================================
+2026-05-30 05:08:13,368 [INFO] app.processor.process_incident — INCIDENT PROCESSOR v3 STARTED
+2026-05-30 05:08:13,369 [INFO] app.processor.process_incident — ============================================================
+2026-05-30 05:08:22,780 [INFO] app.processor.process_incident — [Load] incident=6554e9eb-2206-487a-a7c6-c4229356f496 | project='AIOps Production' tag=aiops-prod | region=us-east-1
+2026-05-30 05:08:26,045 [INFO] app.utils.aws_connector — [AWSClientFactory] Loaded credentials for project 'aiops-prod' region=us-east-1
+2026-05-30 05:08:26,048 [INFO] app.processor.process_incident — [Tools] Initialised for 6554e9eb-2206-487a-a7c6-c4229356f496
+2026-05-30 05:08:26,050 [INFO] app.processor.process_incident — [Status] 6554e9eb-2206-487a-a7c6-c4229356f496 → triage_started (10%)
+2026-05-30 05:08:31,709 [INFO] app.processor.dependency_resolver — [ALB resolver] Matched DNS 'aiops-alb-1937945577.us-east-1.elb.amazonaws.com' → ARN 'arn:aws:elasticloadbalancing:us-east-1:369606757523:loadbalancer/app/aiops-alb/55261edb7427e571'
+2026-05-30 05:08:32,196 [INFO] app.processor.dependency_resolver — [ALB resolver] Found target i-01cbe3e1e9e371033 state=healthy reason=None
+2026-05-30 05:08:32,197 [INFO] app.processor.dependency_resolver — [ALB resolver] Found target i-0d7409065a555843e state=healthy reason=None
+2026-05-30 05:08:32,198 [INFO] app.processor.dependency_resolver — [ALB resolver] Total targets for ALB: 2
+2026-05-30 05:08:32,204 [INFO] app.processor.dependency_resolver — [DependencyResolver] Resolved 1 dep(s) → 2 unique EC2 target(s): ['i-01cbe3e1e9e371033', 'i-0d7409065a555843e']
+2026-05-30 05:08:32,206 [INFO] app.processor.process_incident — [PreTriage] No short-circuit — full investigation
+2026-05-30 05:08:32,208 [INFO] app.processor.process_incident — [PreSignals] No primary root cause extracted pre-LLM
+2026-05-30 05:08:35,510 [INFO] app.processor.process_incident — [Status] 6554e9eb-2206-487a-a7c6-c4229356f496 → infra_analysis (30%)
+2026-05-30 05:08:38,688 [INFO] app.agent.graph — [Agent] Starting investigation for incident 6554e9eb-2206-487a-a7c6-c4229356f496
+2026-05-30 05:08:40,873 [INFO] app.utils.aws_connector — [BedrockClientFactory] Loaded Bedrock credentials region=ap-south-1
+2026-05-30 05:08:41,102 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
+2026-05-30 05:08:42,481 [INFO] app.agent.graph — [Agent] turn complete | tool_calls=1
+2026-05-30 05:08:42,487 [INFO] app.agent.graph — [ToolNode] resolve_incident_targets | args={"dependencies": [{"type": "alb", "region": "us-east-1", "resource_id": "aiops-alb-1937945577.us-east-1.elb.amazonaws.com", "log_group_name": ["alike-prod-backend-app-logs", "alike-prod-backend-logs", "alike-prod-backend-system-logs"]}]}
+2026-05-30 05:08:43,676 [INFO] app.processor.dependency_resolver — [ALB resolver] Matched DNS 'aiops-alb-1937945577.us-east-1.elb.amazonaws.com' → ARN 'arn:aws:elasticloadbalancing:us-east-1:369606757523:loadbalancer/app/aiops-alb/55261edb7427e571'
+2026-05-30 05:08:44,180 [INFO] app.processor.dependency_resolver — [ALB resolver] Found target i-01cbe3e1e9e371033 state=healthy reason=None
+2026-05-30 05:08:44,183 [INFO] app.processor.dependency_resolver — [ALB resolver] Found target i-0d7409065a555843e state=healthy reason=None
+2026-05-30 05:08:44,184 [INFO] app.processor.dependency_resolver — [ALB resolver] Total targets for ALB: 2
+2026-05-30 05:08:44,189 [INFO] app.processor.dependency_resolver — [DependencyResolver] Resolved 1 dep(s) → 2 unique EC2 target(s): ['i-01cbe3e1e9e371033', 'i-0d7409065a555843e']
+2026-05-30 05:08:44,192 [INFO] app.agent.graph — [ToolNode] resolve_incident_targets result: {"targets": [{"instance_id": "i-01cbe3e1e9e371033", "region": "us-east-1", "log_groups": ["alike-prod-backend-app-logs", "alike-prod-backend-logs", "alike-prod-backend-system-logs"], "target_health": "healthy", "target_reason": ""}, {"instance_id": "i-0d7409065a555843e", "region": "us-east-1", "log_groups": ["alike-prod-backend-app-logs", "alike-prod-backend-logs", "alike-prod-backend-system-logs"], "target_health": "healthy", "target_reason": ""}], "alb_meta": {"alb_dns": "aiops-alb-1937945577.
+2026-05-30 05:08:44,199 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
+2026-05-30 05:08:45,665 [INFO] app.agent.graph — [Agent] turn complete | tool_calls=1
+2026-05-30 05:08:45,669 [INFO] app.agent.graph — [ToolNode] get_ec2_analysis | args={"instance_ids": ["i-01cbe3e1e9e371033", "i-0d7409065a555843e"], "region": "us-east-1"}
+2026-05-30 05:08:45,672 [INFO] app.processor.process_incident — [Status] 6554e9eb-2206-487a-a7c6-c4229356f496 → infra_analysis (30%)
+2026-05-30 05:08:54,850 [INFO] app.agent.graph — [ToolNode] get_ec2_analysis result: {"instances": {"i-01cbe3e1e9e371033": {"details": {"instance_id": "i-01cbe3e1e9e371033", "instance_type": "t3.micro", "state": "running", "private_ip": "172.31.22.201", "public_ip": "3.91.6.92", "availability_zone": "us-east-1c", "launch_time": "2026-05-30 05:04:41+00:00", "ami_id": "ami-091138d0f0d41ff90", "security_groups": [{"id": "sg-02dc2192e316318b4", "name": "launch-wizard-10"}], "tags": {"Created_by": "suresh", "Project": "Aiops", "Name": "Alike-prod-backend", "Created_for": "testing"}},
+2026-05-30 05:08:54,865 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
+2026-05-30 05:08:56,498 [INFO] app.agent.graph — [Agent] turn complete | tool_calls=1
+2026-05-30 05:08:56,501 [INFO] app.agent.graph — [ToolNode] get_compressed_logs | args={"log_groups": ["alike-prod-backend-app-logs", "alike-prod-backend-logs", "alike-prod-backend-system-logs"], "region": "us-east-1"}
+2026-05-30 05:08:56,504 [INFO] app.processor.process_incident — [Status] 6554e9eb-2206-487a-a7c6-c4229356f496 → logs_analysis (60%)
+2026-05-30 05:08:59,067 [INFO] app.processor.log_processor — [Start] down_time=05:06:28 | window=-30min/+10min | groups=['alike-prod-backend-app-logs', 'alike-prod-backend-logs', 'alike-prod-backend-system-logs']
+2026-05-30 05:09:00,133 [INFO] app.processor.log_processor — [CW] alike-prod-backend-logs: 0 events in 1 page(s)
+2026-05-30 05:09:00,137 [INFO] app.processor.log_processor — [Phase-A] alike-prod-backend-logs: 0/0 error events [04:36 – 05:16]
+2026-05-30 05:09:01,129 [INFO] app.processor.log_processor — [CW] alike-prod-backend-app-logs: 96 events in 3 page(s)
+2026-05-30 05:09:01,150 [INFO] app.processor.log_processor — [Phase-A] alike-prod-backend-app-logs: 25/96 error events [04:36 – 05:16]
+2026-05-30 05:09:04,302 [INFO] app.processor.log_processor — [CW] alike-prod-backend-system-logs: 2264 events in 3 page(s)
+2026-05-30 05:09:04,349 [INFO] app.processor.log_processor — [Phase-A] alike-prod-backend-system-logs: 8/2264 error events [04:36 – 05:16]
+2026-05-30 05:09:04,352 [INFO] app.processor.log_processor — [Phase-A] 33 total error events
+2026-05-30 05:09:04,352 [INFO] app.processor.log_processor — [Phase-B] Found sustained spike starting at 05:04:59 with 33 errors in 5m
+2026-05-30 05:09:04,353 [INFO] app.processor.log_processor — [Phase-B] First error: 05:04:59 in alike-prod-backend-system-logs | true_start anchored → 04:59:59
+2026-05-30 05:09:04,353 [INFO] app.processor.log_processor — [Timeline Stages]
+  buildup: 04:59:59 → 05:04:59
+  failure: 05:04:59 → 05:06:28
+  impact: 05:06:28 → 05:16:28
+2026-05-30 05:09:04,653 [INFO] app.processor.log_processor — [CW] alike-prod-backend-app-logs: 0 events in 1 page(s)
+2026-05-30 05:09:04,655 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-app-logs / buildup: 0 lines [04:59 – 05:04]
+2026-05-30 05:09:04,860 [INFO] app.processor.log_processor — [CW] alike-prod-backend-app-logs: 17 events in 2 page(s)
+2026-05-30 05:09:04,862 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-app-logs / failure: 17 lines [05:04 – 05:06]
+2026-05-30 05:09:05,440 [INFO] app.processor.log_processor — [CW] alike-prod-backend-app-logs: 83 events in 3 page(s)
+2026-05-30 05:09:05,441 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-app-logs / impact: 83 lines [05:06 – 05:16]
+2026-05-30 05:09:05,584 [INFO] app.processor.log_processor — [CW] alike-prod-backend-logs: 0 events in 1 page(s)
+2026-05-30 05:09:05,585 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-logs / failure: 0 lines [05:04 – 05:06]
+2026-05-30 05:09:05,594 [INFO] app.processor.log_processor — [CW] alike-prod-backend-logs: 0 events in 1 page(s)
+2026-05-30 05:09:05,598 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-logs / buildup: 0 lines [04:59 – 05:04]
+2026-05-30 05:09:05,608 [INFO] app.processor.log_processor — [CW] alike-prod-backend-logs: 0 events in 1 page(s)
+2026-05-30 05:09:05,609 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-logs / impact: 0 lines [05:06 – 05:16]
+2026-05-30 05:09:05,972 [INFO] app.processor.log_processor — [CW] alike-prod-backend-system-logs: 29 events in 3 page(s)
+2026-05-30 05:09:05,974 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-system-logs / impact: 29 lines [05:06 – 05:16]
+2026-05-30 05:09:06,217 [INFO] app.processor.log_processor — [CW] alike-prod-backend-system-logs: 139 events in 2 page(s)
+2026-05-30 05:09:06,219 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-system-logs / failure: 139 lines [05:04 – 05:06]
+2026-05-30 05:09:17,542 [INFO] app.processor.log_processor — [CW] alike-prod-backend-system-logs: 2116 events in 2 page(s)
+2026-05-30 05:09:17,546 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-system-logs / buildup: 2116 lines [04:59 – 05:04]
+2026-05-30 05:09:17,597 [INFO] app.processor.log_processor — [Top Error Signals]
+  • [RARE-HIGH-SIGNAL] [CASCADE-SYMPTOM of postgres, mysql, redis, rabbitmq, mongodb, elasticsearch] [FATAL] 2026-05-30T05:04:56.231681+00:00 ip-172-31-3-63 kernel: Command line: BOOT_IMAGE=/vmlinuz-7.0.0-1004-aws root=PARTUUID=11cd87fd-6998-4910-a85d-04ba2b583906 ro console=tty1 console=ttyS0 nvme_core.io_timeout=4294967295 panic=-1
+  • [RARE-HIGH-SIGNAL] [CASCADE-SYMPTOM of postgres, mysql, redis, rabbitmq, mongodb, elasticsearch] [FATAL] 2026-05-30T05:04:56.231896+00:00 ip-172-31-3-63 kernel: Kernel command line: BOOT_IMAGE=/vmlinuz-7.0.0-1004-aws root=PARTUUID=11cd87fd-6998-4910-a85d-04ba2b583906 ro console=tty1 console=ttyS0 nvme_core.io_timeout=4294967295 panic=-1
+  • [RARE-HIGH-SIGNAL] [CASCADE-SYMPTOM of postgres, mysql, redis, rabbitmq, mongodb, elasticsearch] [FATAL] 2026-05-30T05:04:56.883523+00:00 ip-172-31-22-201 kernel: Command line: BOOT_IMAGE=/vmlinuz-7.0.0-1004-aws root=PARTUUID=11cd87fd-6998-4910-a85d-04ba2b583906 ro console=tty1 console=ttyS0 nvme_core.io_timeout=4294967295 panic=-1
+  • [RARE-HIGH-SIGNAL] [CASCADE-SYMPTOM of postgres, mysql, redis, rabbitmq, mongodb, elasticsearch] [FATAL] 2026-05-30T05:04:56.883769+00:00 ip-172-31-22-201 kernel: Kernel command line: BOOT_IMAGE=/vmlinuz-7.0.0-1004-aws root=PARTUUID=11cd87fd-6998-4910-a85d-04ba2b583906 ro console=tty1 console=ttyS0 nvme_core.io_timeout=4294967295 panic=-1
+  • [x6] [EXCEPTION] Traceback (most recent call last):
+  File "/home/ubuntu/aiops-testcase/app.py", line 192, in get_incident_details
+    with get_db() as conn:
+         ~~~~~~^^
+  File "/usr/lib/python3.14/contextlib.py", line 141, in __enter__
+    return next(self.gen)
+  File "/home/ubuntu/aiops-testcase/app.py", lin
+  • [x6] [GENERIC-ERROR] 2026-05-30 05:06:28,791 ERROR failed_to_fetch_incident_details
+  • [x6] [GENERIC-ERROR] psycopg2.ProgrammingError: invalid dsn: missing "=" after "pstgresql://meyiconnect_test_aiops_user:9UqSVbvQMMPK7ANn5SpYQagT6HifUJys@dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com/meyiconnect_test_aiops" in connection info string
+  • [UNAVAILABLE] 2026-05-30T05:04:56.231784+00:00 ip-172-31-3-63 kernel: On node 0, zone DMA: 1 pages in unavailable ranges
+  • [UNAVAILABLE] 2026-05-30T05:04:56.231785+00:00 ip-172-31-3-63 kernel: On node 0, zone DMA: 96 pages in unavailable ranges
+  • [UNAVAILABLE] 2026-05-30T05:04:56.231786+00:00 ip-172-31-3-63 kernel: On node 0, zone DMA32: 784 pages in unavailable ranges
+2026-05-30 05:09:17,600 [INFO] app.processor.log_processor — [Done] groups=3 stages=3 total_raw=2384 top_errors=10
+2026-05-30 05:09:17,606 [INFO] app.agent.graph — [ToolNode] get_compressed_logs result: {"adaptive_window": {"before_minutes": 30, "after_minutes": 10}, "anchor": {"true_start": "2026-05-30T04:59:59.164000+00:00", "first_error_ts": "2026-05-30T05:04:59.164000+00:00", "first_error_msg": "2026-05-30T05:04:58.924170+00:00 ip-172-31-3-63 snapd[632]: daemon.go:370: adjusting startup timeout by 45s (pessimistic estimate of 30s plus 5s per snap)", "first_error_group": "alike-prod-backend-system-logs", "first_error_weight": 25}, "top_errors": ["[RARE-HIGH-SIGNAL] [CASCADE-SYMPTOM of postgr
+2026-05-30 05:09:17,613 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
+2026-05-30 05:09:28,355 [INFO] app.agent.graph — [Agent] turn complete | tool_calls=0
+2026-05-30 05:09:28,357 [INFO] app.agent.graph — [Agent] ReAct loop done | incident=6554e9eb-2206-487a-a7c6-c4229356f496 | messages=9 | tool_calls=3
+2026-05-30 05:09:30,654 [INFO] app.utils.aws_connector — [BedrockClientFactory] Loaded Bedrock credentials region=ap-south-1
+2026-05-30 05:09:31,071 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
+2026-05-30 05:09:34,664 [INFO] app.agent.graph — [Agent] Complete | incident=6554e9eb-2206-487a-a7c6-c4229356f496 | structured=yes
+2026-05-30 05:09:34,672 [INFO] app.processor.process_incident — [Agent] Finished | tool_calls=3 | messages=9 | structured=yes
+2026-05-30 05:09:34,674 [INFO] app.processor.process_incident — [Status] 6554e9eb-2206-487a-a7c6-c4229356f496 → remediation_generated (90%)
+2026-05-30 05:09:38,993 [INFO] app.processor.process_incident — [SaveRCA] Updated 1 row(s) for 6554e9eb-2206-487a-a7c6-c4229356f496
+2026-05-30 05:09:39,273 [INFO] app.processor.process_incident — ============================================================
+2026-05-30 05:09:39,275 [INFO] app.processor.process_incident — INCIDENT COMPLETED: 6554e9eb-2206-487a-a7c6-c4229356f496
+2026-05-30 05:09:39,276 [INFO] app.processor.process_incident — ============================================================
+2026-05-30 05:09:39,280 [INFO] app.processor.worker — [Worker] Completed incident_id=6554e9eb-2206-487a-a7c6-c4229356f496
+2026-05-30 05:10:31,115 [INFO] app.main — Shutting down worker...

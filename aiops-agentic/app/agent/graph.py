@@ -1,108 +1,171 @@
 """
 app/agent/graph.py
 ──────────────────
-LangGraph ReAct agent for autonomous AWS incident investigation.
+LangGraph ReAct agent for autonomous AWS incident investigation (v4).
 
-Architecture
-────────────
-  ┌─────────┐     ┌──────────────┐     ┌──────────────┐
-  │  START  │────▶│  agent_node  │────▶│  tool_node   │
-  └─────────┘     │  (LLM)       │◀────│  (AWS calls) │
-                  └──────┬───────┘     └──────────────┘
-                         │ (no more tool calls)
-                         ▼
-                      ┌──────┐
-                      │  END │
-                      └──────┘
+Key changes in v4
+─────────────────
+• Two-phase LLM approach:
+    Phase 1 — ReAct loop (llm + bind_tools): agent calls tools iteratively.
+    Phase 2 — Structured extraction (llm.with_structured_output): once the
+              loop ends, the final agent message is sent to a SECOND LLM call
+              that uses Bedrock's native structured output to parse the result
+              into a guaranteed-valid schema. This eliminates all JSON parse
+              failures caused by truncated or malformed text output.
 
-The agent node runs the LLM with ALL tools available.
-The LLM decides which tool(s) to call next.
-The tool node executes the tool and returns results.
-This loop continues until the LLM produces a final answer (no tool calls).
+• Output schema trimmed to exactly 5 fields:
+    probable_root_cause (str)
+    confidence          (int 0-100)
+    evidence            (list[str])
+    dependency_impact   (list[str])
+    recommended_actions (list[str])
 
-Key design decisions
-────────────────────
-• We use Claude 3 Sonnet via Bedrock (same infra you already use).
-• The agent state carries the full message history — the LLM always sees
-  what it has already observed.
-• Max iterations is set high (30) because thorough investigation beats speed.
-• Tool calls are always sequential per iteration (no parallel tool calls in
-  the base ReAct pattern), but the LLM can call multiple tools across turns.
+• DB status updates wired to WORKFLOW_STATES — only Python writes these.
+• Pre-triage generates investigation hypotheses.
+• All incidents continue through the LangGraph investigation workflow.
+• Stop-condition: has_sufficient_evidence() checked after each tool.
 """
 
 import json
 import logging
 import os
+import time
 from typing import Annotated, Literal, Sequence
 
-from langgraph.graph import StateGraph, START, END
-from langgraph.graph.message import add_messages
-from langchain_core.messages import BaseMessage, ToolMessage, SystemMessage, HumanMessage, AIMessage
+from botocore.exceptions import ClientError
 from langchain_aws import ChatBedrock
+from langchain_core.messages import (
+    BaseMessage, HumanMessage, SystemMessage, ToolMessage,
+)
 from langchain_core.runnables import RunnableConfig
+from langgraph.graph import END, START, StateGraph
+from langgraph.graph.message import add_messages
 from typing_extensions import TypedDict
 
-from app.agent.tools import ALL_TOOLS
 from app.agent.prompts import SYSTEM_PROMPT
+from app.agent.tools import (
+    ALL_TOOLS,
+    WORKFLOW_STATES,
+    correlate_timeline,
+    extract_rca_signals,
+    has_sufficient_evidence,
+    pre_triage_targets,
+)
+from app.utils.aws_connector import BedrockClientFactory
 
 logger = logging.getLogger(__name__)
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
-BEDROCK_MODEL    = os.environ.get("BEDROCK_MODEL_ID", "anthropic.claude-3-sonnet-20240229-v1:0")
-BEDROCK_REGION   = os.environ.get("AWS_REGION", "ap-south-1")
-MAX_ITERATIONS   = int(os.environ.get("AGENT_MAX_ITERATIONS", "30"))
+BEDROCK_MODEL  = os.environ.get("BEDROCK_MODEL_ID", "anthropic.claude-3-sonnet-20240229-v1:0")
+BEDROCK_REGION = os.environ.get("AWS_REGION", "ap-south-1")
+MAX_ITERATIONS = int(os.environ.get("AGENT_MAX_ITERATIONS", "12"))
+
+# ── Output schema (5 fields only) ────────────────────────────────────────────
+
+# Pydantic-like schema dict for with_structured_output
+RCA_SCHEMA = {
+    "title": "IncidentRCA",
+    "description": "Root cause analysis result for an AWS incident",
+    "type": "object",
+    "properties": {
+        "probable_root_cause": {
+            "type": "string",
+            "description": "One sentence: the exact failure cause naming the instance or service",
+        },
+        "confidence": {
+            "type": "integer",
+            "description": "Confidence score 0-100",
+            "minimum": 0,
+            "maximum": 100,
+        },
+        "evidence": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "List of direct evidence strings (log errors, metric values) that prove the root cause",
+        },
+        "dependency_impact": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "List of downstream services/endpoints affected and how",
+        },
+        "recommended_actions": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Exactly 3 items: [fix, verify, prevent]",
+        },
+    },
+    "required": [
+        "probable_root_cause",
+        "confidence",
+        "evidence",
+        "dependency_impact",
+        "recommended_actions",
+    ],
+}
 
 
 # ── Agent state ───────────────────────────────────────────────────────────────
 
 class AgentState(TypedDict):
-    messages: Annotated[Sequence[BaseMessage], add_messages]
+    messages:        Annotated[Sequence[BaseMessage], add_messages]
+    incident_id:     str
+    tool_calls_made: list[str]
+    rca_signals:     dict
 
 
-# ── Build the LLM with tools bound ───────────────────────────────────────────
+# ── LLM builders ─────────────────────────────────────────────────────────────
 
-def _build_llm(aws_factory=None):
-    """
-    Build a ChatBedrock LLM with all investigation tools bound.
-    Uses the AWSClientFactory credentials if provided, else env vars.
-    """
-    kwargs = {
-        "model_id":    BEDROCK_MODEL,
-        "region_name": BEDROCK_REGION,
-        "model_kwargs": {
-            "max_tokens":  8192,
+def _build_bedrock_base() -> ChatBedrock:
+    """Shared Bedrock client (no tools, no structured output)."""
+    bedrock_factory = BedrockClientFactory()
+    bedrock_client  = bedrock_factory.get_bedrock_runtime_client()
+    bedrock_region  = bedrock_factory.region or BEDROCK_REGION
+
+    return ChatBedrock(
+        model_id=BEDROCK_MODEL,
+        region_name=bedrock_region,
+        client=bedrock_client,
+        model_kwargs={
+            "max_tokens":  1500,
             "temperature": 0.1,
             "top_p":       0.9,
         },
-    }
-
-    # If we have a factory with explicit credentials, use them
-    if aws_factory and hasattr(aws_factory, "access_key"):
-        import boto3
-        session = boto3.Session(
-            aws_access_key_id=aws_factory.access_key,
-            aws_secret_access_key=aws_factory.secret_key,
-            region_name=aws_factory.region or BEDROCK_REGION,
-        )
-        kwargs["client"] = session.client("bedrock-runtime", region_name=BEDROCK_REGION)
-
-    llm = ChatBedrock(**kwargs)
-    return llm.bind_tools(ALL_TOOLS)
-
-
-# ── Node: agent (LLM decides next action) ─────────────────────────────────────
-
-def agent_node(state: AgentState, llm_with_tools) -> AgentState:
-    """
-    Run the LLM on the current message history.
-    The LLM either calls tool(s) or produces its final answer.
-    """
-    response = llm_with_tools.invoke(state["messages"])
-    logger.info(
-        f"[Agent] turn complete | "
-        f"tool_calls={len(response.tool_calls) if hasattr(response, 'tool_calls') else 0}"
     )
+
+
+def _build_llm_with_tools() -> ChatBedrock:
+    """Phase 1 LLM — ReAct reasoning loop with tool access."""
+    return _build_bedrock_base().bind_tools(ALL_TOOLS)
+
+
+def _build_llm_structured() -> ChatBedrock:
+    """Phase 2 LLM — structured output extraction (no tools)."""
+    return _build_bedrock_base().with_structured_output(RCA_SCHEMA)
+
+
+# ── Throttle-aware invoke ─────────────────────────────────────────────────────
+
+def safe_llm_invoke(llm, messages):
+    for attempt in range(5):
+        try:
+            return llm.invoke(messages)
+        except ClientError as e:
+            if e.response["Error"]["Code"] == "ThrottlingException":
+                sleep_time = min(5 * (attempt + 1), 30)
+                logger.warning(f"[Bedrock] throttled, retrying in {sleep_time}s")
+                time.sleep(sleep_time)
+            else:
+                raise
+    raise RuntimeError("Bedrock retry limit exceeded")
+
+
+# ── Node: agent (ReAct reasoning) ────────────────────────────────────────────
+
+def agent_node(state: AgentState, llm_with_tools) -> dict:
+    response = safe_llm_invoke(llm_with_tools, state["messages"])
+    tool_call_count = len(response.tool_calls) if hasattr(response, "tool_calls") else 0
+    logger.info(f"[Agent] turn complete | tool_calls={tool_call_count}")
     return {"messages": [response]}
 
 
@@ -111,125 +174,445 @@ def agent_node(state: AgentState, llm_with_tools) -> AgentState:
 _TOOL_MAP = {t.name: t for t in ALL_TOOLS}
 
 
-def tool_node(state: AgentState) -> AgentState:
-    """
-    Execute all tool calls from the last AI message.
-    Returns ToolMessage results back into the message history.
-    """
-    last_message = state["messages"][-1]
-    tool_results = []
+def tool_node(state: AgentState) -> dict:
+    last_message    = state["messages"][-1]
+    tool_results    = []
+    incident_id     = state.get("incident_id", "")
+    tool_calls_made = list(state.get("tool_calls_made", []))
+    rca_signals     = dict(state.get("rca_signals", {}))
 
     for tc in last_message.tool_calls:
         tool_name = tc["name"]
         tool_args = tc["args"]
         tool_id   = tc["id"]
 
-        logger.info(f"[ToolNode] Calling {tool_name} | args={json.dumps(tool_args)[:200]}")
+        logger.info(f"[ToolNode] {tool_name} | args={json.dumps(tool_args)[:300]}")
+
+        # Update DB status at key investigation milestones
+        if incident_id:
+            from app.processor.process_incident import _update_status
+            _STATUS_MAP = {
+                "get_ec2_analysis":    ("infra_analysis", WORKFLOW_STATES["infra_analysis"]),
+                "get_compressed_logs": ("logs_analysis",  WORKFLOW_STATES["logs_analysis"]),
+                "correlate_instances": ("ai_reasoning",   WORKFLOW_STATES["ai_reasoning"]),
+                "get_infra_events":    ("infra_analysis",  WORKFLOW_STATES["infra_analysis"]),
+            }
+            if tool_name in _STATUS_MAP:
+                status, pct = _STATUS_MAP[tool_name]
+                _update_status(incident_id, status, pct)
 
         tool_fn = _TOOL_MAP.get(tool_name)
         if tool_fn is None:
             result_content = json.dumps({"error": f"Unknown tool: {tool_name}"})
         else:
             try:
-                result = tool_fn.invoke(tool_args)
+                result         = tool_fn.invoke(tool_args)
                 result_content = json.dumps(result, default=str)
+
+                # Accumulate RCA signals from tool results
+                if tool_name == "get_ec2_analysis":
+                    _accumulate_ec2_signals(result, rca_signals)
+                elif tool_name == "get_compressed_logs":
+                    _accumulate_log_signals(result, rca_signals)
+                elif tool_name == "resolve_incident_targets":
+                    _accumulate_alb_signals(result, rca_signals)
+
             except Exception as exc:
                 logger.error(f"[ToolNode] {tool_name} raised: {exc}")
                 result_content = json.dumps({"error": str(exc)})
 
-        logger.info(f"[ToolNode] {tool_name} result: {result_content[:300]}")
+        logger.info(f"[ToolNode] {tool_name} result: {result_content[:500]}")
+        tool_results.append(ToolMessage(content=result_content, tool_call_id=tool_id))
+        tool_calls_made.append(tool_name)
 
-        tool_results.append(
-            ToolMessage(content=result_content, tool_call_id=tool_id)
-        )
+    return {
+        "messages":        tool_results,
+        "tool_calls_made": tool_calls_made,
+        "rca_signals":     rca_signals,
+    }
 
-    return {"messages": tool_results}
+
+def _accumulate_ec2_signals(result: dict, rca_signals: dict):
+    for iid, data in result.get("instances", {}).items():
+        state = data.get("details", {}).get("state")
+        if state:
+            new = extract_rca_signals([], ec2_state=state)
+            _merge_signals(rca_signals, new)
 
 
-# ── Routing: continue loop or end ─────────────────────────────────────────────
+def _accumulate_log_signals(result: dict, rca_signals: dict):
+    samples = []
+    for e in result.get("top_errors", []):
+        if isinstance(e, str):
+            samples.append(e)
+        elif isinstance(e, dict):
+            sample = e.get("sample")
+            if sample:
+                samples.append(sample)
+    for group_data in result.get("group_summaries", {}).values():
+        for stage_data in group_data.values():
+            for cluster in stage_data.get("top_clusters", []):
+                if cluster.get("sample"):
+                    samples.append(cluster["sample"])
+    if samples:
+        new = extract_rca_signals(samples)
+        _merge_signals(rca_signals, new)
+
+
+def _accumulate_alb_signals(result: dict, rca_signals: dict):
+    reasons = [
+        t.get("target_reason", "") for t in result.get("targets", [])
+        if t.get("target_reason")
+    ]
+    if reasons:
+        new = extract_rca_signals([], alb_target_reasons=reasons)
+        _merge_signals(rca_signals, new)
+
+
+def _merge_signals(existing: dict, new: dict):
+    if not existing:
+        existing.update(new)
+        return
+
+    seen = {s["rca_type"]: s for s in existing.get("all_signals", [])}
+    for s in new.get("all_signals", []):
+        key = s["rca_type"]
+        if key not in seen or s["confidence"] > seen[key]["confidence"]:
+            seen[key] = s
+    all_sigs = list(seen.values())
+    existing["all_signals"]        = all_sigs
+    existing["supporting_signals"] = [s for s in all_sigs if s["type"] == "supporting_signal"]
+    existing["infra_symptoms"]     = [s for s in all_sigs if s["type"] == "infra_symptom"]
+    existing["downstream_impacts"] = [s for s in all_sigs if s["type"] == "downstream_impact"]
+
+    primaries = [s for s in all_sigs if s["type"] == "primary_root_cause"]
+    if primaries:
+        best = max(primaries, key=lambda x: x["confidence"])
+        existing["primary_root_cause"]    = best
+        existing["has_deterministic_rca"] = best["confidence"] >= 0.85
+    else:
+        existing.setdefault("primary_root_cause",    None)
+        existing.setdefault("has_deterministic_rca", False)
+
+
+# ── Routing ───────────────────────────────────────────────────────────────────
 
 def should_continue(state: AgentState) -> Literal["tools", "__end__"]:
-    """If the last AI message has tool calls → run tools. Otherwise → done."""
     last = state["messages"][-1]
+
     if hasattr(last, "tool_calls") and last.tool_calls:
+        rca_signals     = state.get("rca_signals", {})
+        tool_calls_made = state.get("tool_calls_made", [])
+        stop, reason    = has_sufficient_evidence(rca_signals, tool_calls_made)
+        if stop:
+            logger.info(f"[StopCondition] Early stop — {reason}")
+            return "__end__"
         return "tools"
+
     return "__end__"
 
 
 # ── Graph builder ─────────────────────────────────────────────────────────────
 
-def build_agent_graph(aws_factory=None):
-    """
-    Build and compile the LangGraph agent.
-    Call once per incident (aws_factory carries per-incident credentials).
-    """
-    llm = _build_llm(aws_factory)
+def build_agent_graph():
+    llm = _build_llm_with_tools()
 
-    # Bind the LLM into the node via closure
     def _agent_node(state: AgentState):
         return agent_node(state, llm)
 
     graph = StateGraph(AgentState)
     graph.add_node("agent", _agent_node)
     graph.add_node("tools", tool_node)
-
     graph.add_edge(START, "agent")
     graph.add_conditional_edges("agent", should_continue)
     graph.add_edge("tools", "agent")
-
     return graph.compile()
 
 
-# ── Public entry: run the full investigation ──────────────────────────────────
+# ── Phase 2: structured extraction ───────────────────────────────────────────
 
-def run_agent_investigation(incident_id: str, aws_factory) -> dict:
+def _extract_structured_result(
+    conversation_messages: list,
+    accumulated_signals: dict,
+    incident_id: str,
+) -> dict | None:
     """
-    Run the autonomous investigation agent for a single incident.
+    Phase 2: take the full conversation (context + tool results) and ask a
+    fresh LLM call with structured output to produce the guaranteed-schema JSON.
 
-    This is called by process_incident.py instead of the old Bedrock single-prompt approach.
-
-    Returns the final state with the full message history.
-    The agent itself stores results in DB via store_rca_result tool.
+    This avoids all text-parsing failures — Bedrock's native tool-calling
+    mechanism forces the model to emit a valid JSON object matching RCA_SCHEMA.
     """
-    logger.info(f"[Agent] Starting agentic investigation for incident {incident_id}")
+    extraction_prompt = HumanMessage(content=(
+        "Based on the investigation above, produce the final root cause analysis. "
+        "Fill every field from the evidence you gathered. "
+        "evidence[] must contain direct quotes from tool outputs, not paraphrases. "
+        "recommended_actions[] must have exactly 3 items: fix, verify, prevent."
+    ))
 
-    graph = build_agent_graph(aws_factory)
+    messages_for_extraction = list(conversation_messages) + [extraction_prompt]
 
-    initial_state: AgentState = {
-        "messages": [
-            SystemMessage(content=SYSTEM_PROMPT),
-            HumanMessage(
-                content=(
-                    f"Start investigating incident ID: {incident_id}\n\n"
-                    f"Follow the investigation protocol. Call get_incident_context() first "
-                    f"to load the full incident details from the database.\n\n"
-                    f"Be thorough. Use all available tools. "
-                    f"Do not conclude until you have checked EC2, metrics, logs, and CloudTrail.\n"
-                    f"Store the final RCA using store_rca_result() before finishing."
-                )
-            ),
-        ]
+    try:
+        llm_structured = _build_llm_structured()
+        result = safe_llm_invoke(llm_structured, messages_for_extraction)
+
+        if isinstance(result, dict):
+            return _normalise_structured(result)
+
+        logger.warning("[Extraction] with_structured_output returned non-dict, falling back")
+    except Exception as exc:
+        logger.warning(f"[Extraction] Structured output failed: {exc}")
+
+    # ── Fallback 1: try plain JSON parse of last AI message ───────────────────
+    for msg in reversed(conversation_messages):
+        if hasattr(msg, "content") and isinstance(msg.content, str):
+            raw = _parse_json_text(msg.content)
+            if raw and isinstance(raw, dict) and "probable_root_cause" in raw:
+                logger.info("[Extraction] Recovered JSON from last AI message text")
+                return _normalise_structured(raw)
+
+    # ── Fallback 2: build from strong signals if JSON extraction completely fails ──
+    # Note: This is a post-investigation recovery mechanism and not a replacement
+    # for the LLM's investigation. It only runs if the LLM finishes its tools
+    # but completely fails to generate valid structured JSON output twice.
+    if accumulated_signals.get("has_strong_signal"):
+        logger.warning("[Extraction] Using strong-signal fallback due to LLM extraction failure")
+        return _signals_to_structured(accumulated_signals, incident_id)
+
+    return None
+
+
+def _normalise_structured(raw: dict) -> dict:
+    """Normalise / coerce field types to match the expected schema."""
+    confidence = raw.get("confidence", 50)
+    try:
+        confidence = int(float(confidence))
+        # Accept 0.0-1.0 float (multiply up to int)
+        if confidence <= 1:
+            confidence = int(confidence * 100)
+        confidence = max(0, min(100, confidence))
+    except (TypeError, ValueError):
+        confidence = 50
+
+    return {
+        "probable_root_cause": str(raw.get("probable_root_cause") or raw.get("root_cause") or ""),
+        "confidence":          confidence,
+        "evidence":            [str(e) for e in (raw.get("evidence") or [])],
+        "dependency_impact":   [str(d) for d in (raw.get("dependency_impact") or [])],
+        "recommended_actions": [str(a) for a in (raw.get("recommended_actions") or [])],
     }
 
-    config = RunnableConfig(recursion_limit=MAX_ITERATIONS * 2)
 
+def _parse_json_text(text: str) -> dict | None:
+    """Try to extract a JSON block from text (last-resort text parser)."""
+    try:
+        if "```json" in text:
+            block = text.split("```json")[1].split("```")[0].strip()
+            return json.loads(block)
+        stripped = text.strip()
+        if stripped.startswith("{"):
+            return json.loads(stripped)
+    except (json.JSONDecodeError, IndexError):
+        pass
+    return None
+
+
+def _signals_to_structured(signals: dict, incident_id: str) -> dict:
+    """Build a minimal structured result from pre-extracted signals."""
+    primary  = signals.get("primary_root_cause") or {}
+    desc     = primary.get("description", "Root cause could not be determined.")
+    conf     = int(primary.get("confidence", 0.4) * 100)
+    rca_type = primary.get("rca_type", "unknown")
+
+    evidence = [primary.get("evidence", "")] if primary.get("evidence") else []
+    for sig in signals.get("supporting_signals", [])[:2]:
+        if sig.get("evidence"):
+            evidence.append(sig["evidence"])
+
+    return {
+        "probable_root_cause": desc,
+        "confidence":          conf,
+        "evidence":            evidence,
+        "dependency_impact":   [
+            s["description"] for s in signals.get("downstream_impacts", [])
+        ],
+        "recommended_actions": _default_actions_for(rca_type),
+    }
+
+
+def _default_actions_for(rca_type: str) -> list[str]:
+    _MAP = {
+        "database_config_error":      [
+            "Correct the DATABASE_URL / DSN environment variable on the instance.",
+            "Verify DB connectivity: psql <corrected-dsn> and check for successful connection.",
+            "Add DSN format validation to the application startup health check.",
+        ],
+        "instance_stopped":           [
+            "Start the EC2 instance via: aws ec2 start-instances --instance-ids <iid>",
+            "Confirm ALB target returns to healthy state within 60 seconds.",
+            "Enable CloudWatch alarm to detect stopped instances automatically.",
+        ],
+        "iam_permission_error":       [
+            "Attach the missing IAM policy to the instance or task role.",
+            "Verify the fix: re-run the failing API call and confirm no AccessDenied.",
+            "Implement least-privilege IAM reviews as part of deployment checklist.",
+        ],
+        "oom_kill":                   [
+            "Restart the application service: sudo systemctl restart <service>",
+            "Confirm memory usage drops below 80% after restart.",
+            "Increase instance type or tune application heap/memory limits.",
+        ],
+        "disk_full":                  [
+            "Free disk space: sudo du -sh /* | sort -rh | head -20, then remove stale files.",
+            "Confirm disk usage drops below 80%: df -h",
+            "Set up a CloudWatch disk-space alarm at 80% threshold.",
+        ],
+    }
+    return _MAP.get(rca_type, [
+        f"Investigate and remediate {rca_type}.",
+        "Verify the fix by confirming service health.",
+        "Add monitoring to detect recurrence early.",
+    ])
+
+
+# ── Initial HumanMessage builder ──────────────────────────────────────────────
+
+def _build_initial_human_message(
+    incident_context: dict,
+    triage_result:    dict | None,
+    rca_signals:      dict | None,
+    timeline:         dict | None,
+    similar_incidents: list[dict],
+) -> str:
+    lines = [
+        "## Incident Investigation Context",
+        "",
+        f"**Incident ID:** {incident_context.get('incident_id')}",
+        f"**Monitor:** {incident_context.get('monitor_name')} ({incident_context.get('monitor_type')})",
+        f"**Down Message:** {incident_context.get('down_message')}",
+        f"**Down Time:** {incident_context.get('incident_down_time')}",
+        f"**AWS Region:** {incident_context.get('aws_region')}",
+        f"**Monitor URL:** {incident_context.get('monitor_url', 'N/A')}",
+        "",
+        "**Dependencies:**",
+        json.dumps(incident_context.get("dependencies", []), indent=2),
+        "",
+    ]
+
+    if rca_signals and rca_signals.get("primary_root_cause"):
+        primary = rca_signals["primary_root_cause"]
+        lines += [
+            "## Pre-Extracted RCA Signals",
+            f"**Primary Root Cause:** `{primary['rca_type']}` — {primary['description']}",
+            f"**Confidence:** {primary['confidence']:.0%}  |  **Source:** {primary['source']}",
+            f"**Evidence:** {primary.get('evidence', '')}",
+            "> Treat this as your leading hypothesis. Confirm with tools.",
+            "",
+        ]
+
+    if triage_result:
+        lines += [
+            "## Investigation Hypothesis",
+            "> This is an ALB-derived hypothesis only. Validate with additional evidence before concluding root cause.",
+            f"**Likely Issue:** {triage_result.get('likely_issue')}",
+            f"**Target Reason:** {triage_result.get('target_reason')}",
+            f"**Affected Instances:** {', '.join(triage_result.get('affected_instances', []))}",
+            f"priority_hints (skip_metrics={triage_result.get('skip_metrics')} | skip_logs={triage_result.get('skip_logs')}): If True, less likely to contain root cause but you MUST still investigate if evidence leads there.",
+            "",
+        ]
+
+    if timeline and timeline.get("causal_chain"):
+        lines += ["## Temporal Correlation", ""]
+        for evt in timeline["causal_chain"]:
+            mins = evt.get("minutes_before_incident", 0)
+            lines.append(
+                f"  [{evt['type'].upper()}] {evt['timestamp']} "
+                f"({abs(mins):.1f} min {'before' if mins > 0 else 'at'} incident): {evt['event']}"
+            )
+        lines.append("")
+
+    if similar_incidents:
+        lines += ["## Similar Past Incidents", ""]
+        for si in similar_incidents[:2]:
+            lines.append(f"  - {si.get('monitor_name')}: {si.get('summary', '')[:100]}")
+        lines.append("")
+
+    lines += [
+        "## Task",
+        "",
+        "Investigate using the available tools. Stop as soon as you have enough evidence.",
+        "End your final message with ONLY the JSON block from your system prompt.",
+    ]
+
+    return "\n".join(lines)
+
+
+# ── Public entry point ────────────────────────────────────────────────────────
+
+def run_agent_investigation(
+    incident_id:       str,
+    incident_context:  dict,
+    triage_result:     dict | None = None,
+    rca_signals:       dict | None = None,
+    timeline:          dict | None = None,
+    similar_incidents: list[dict] | None = None,
+) -> dict:
+    """
+    Run the investigation for a single incident.
+
+    Returns dict with:
+        incident_id, message_count, tool_call_count,
+        structured_result (5-field schema).
+    """
+    logger.info(f"[Agent] Starting investigation for incident {incident_id}")
+
+    similar_incidents = similar_incidents or []
+    rca_signals       = rca_signals or {}
+
+    # ── Phase 1: ReAct investigation loop ────────────────────────────────────
+    graph = build_agent_graph()
+
+    initial_human = _build_initial_human_message(
+        incident_context, triage_result, rca_signals, timeline, similar_incidents
+    )
+
+    initial_state: AgentState = {
+        "messages":        [SystemMessage(content=SYSTEM_PROMPT), HumanMessage(content=initial_human)],
+        "incident_id":     incident_id,
+        "tool_calls_made": [],
+        "rca_signals":     rca_signals,
+    }
+
+    config      = RunnableConfig(recursion_limit=MAX_ITERATIONS * 2)
     final_state = graph.invoke(initial_state, config=config)
 
-    # Count tool calls made
     tool_call_count = sum(
         len(m.tool_calls) if hasattr(m, "tool_calls") and m.tool_calls else 0
         for m in final_state["messages"]
     )
 
+    accumulated_sigs = final_state.get("rca_signals", rca_signals)
+
     logger.info(
-        f"[Agent] Investigation complete for {incident_id} | "
-        f"messages={len(final_state['messages'])} | "
-        f"tool_calls={tool_call_count}"
+        f"[Agent] ReAct loop done | incident={incident_id} | "
+        f"messages={len(final_state['messages'])} | tool_calls={tool_call_count}"
+    )
+
+    # ── Phase 2: structured extraction ───────────────────────────────────────
+    structured_result = _extract_structured_result(
+        list(final_state["messages"]),
+        accumulated_sigs,
+        incident_id,
+    )
+
+    logger.info(
+        f"[Agent] Complete | incident={incident_id} | "
+        f"structured={'yes' if structured_result else 'no'}"
     )
 
     return {
-        "incident_id":     incident_id,
-        "message_count":   len(final_state["messages"]),
-        "tool_call_count": tool_call_count,
-        "final_message":   final_state["messages"][-1].content if final_state["messages"] else "",
+        "incident_id":       incident_id,
+        "message_count":     len(final_state["messages"]),
+        "tool_call_count":   tool_call_count,
+        "structured_result": structured_result,
     }

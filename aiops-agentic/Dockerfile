@@ -1,5 +1,8 @@
 FROM python:3.11-slim
 
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
 # System deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev gcc \
@@ -13,6 +16,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY app/ ./app/
+
+# Create logs directory
+RUN mkdir -p /app/logs
 
 # Non-root user for security
 RUN useradd -m appuser && chown -R appuser /app

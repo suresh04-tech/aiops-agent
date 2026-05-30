@@ -1,32 +1,30 @@
 """
-processor/process_incident.py
-──────────────────────────────
-Entry point called by the worker.
+app/processor/process_incident.py
+──────────────────────────────────
+Orchestrator for AIOps incident investigation (v3).
 
-OLD flow (replaced):
-  Load incident → collect all data → build giant prompt → one Bedrock call → store
-
-NEW agentic flow:
-  Load incident → init tools with DB creds → run LangGraph ReAct agent
-  The agent decides what to look at, calls tools iteratively, and stores
-  its own results in DB via the store_rca_result tool.
-
-What stayed the same
-─────────────────────
-• DB schema and queries (meyiconnect.insight_incidents, incident_logs)
-• dependency_resolver.py       — agent calls it via resolve_incident_targets tool
-• log_processor.py             — agent calls it via get_compressed_logs tool
-• correlation_engine.py        — agent calls it via correlate_instances tool
-• Cloudtrail_processor.py      — agent calls it via get_infra_events tool
-• aws_connector.py             — used to build AWSClientFactory
-• queue / worker               — unchanged, still calls process_incident(payload)
-
-What changed
+Changes in v3
 ─────────────
-• No more giant prompt builder (_build_prompt_multi deleted)
-• No more direct Bedrock invocation (_invoke_bedrock deleted)
-• No more fixed pipeline — agent decides investigation order
-• Status updates happen INSIDE the agent via update_investigation_status tool
+P1 — Pre-triage hypothesis generation (guides investigation but does not skip it)
+     entirely. RCA is built from deterministic signals. Zero Bedrock invokes.
+
+P2 — Pre-signal extraction: extract_rca_signals() runs on any immediately
+     available log samples / EC2 state / ALB reasons BEFORE the LLM starts.
+     Result embedded in initial HumanMessage.
+
+P4 — Strict state machine: _update_status() only called from Python.
+     States: queued → triage_started → infra_analysis → logs_analysis →
+             ai_reasoning → remediation_generated → completed | failed.
+     LLM never touches status.
+
+P7 — Temporal correlator: correlate_timeline() called in Python after
+     resolve_incident_targets() + get_infra_events() pre-fetch.
+
+P8 — Similar incident lookup: find_similar_incidents() called before
+     the agent starts and embedded as context.
+
+P5 — All DB writes (RCA, evidence, status) centralised here.
+     No tool calls for persistence.
 """
 
 import json
@@ -35,29 +33,42 @@ from datetime import datetime, timezone
 
 from app.utils.db import get_db
 from app.utils.aws_connector import AWSClientFactory
-from app.agent.tools import init_tools
+from app.agent.tools import (
+    init_tools,
+    resolve_incident_targets,
+    pre_triage_targets,
+    extract_rca_signals,
+    correlate_timeline,
+    find_similar_incidents,
+    WORKFLOW_STATES,
+)
 from app.agent.graph import run_agent_investigation
 
 logger = logging.getLogger(__name__)
 
 
-# ── Status constants (kept for fallback use) ──────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════════
+# P4 — Strict state machine DB writer
+# Only this function may update analysis_status / analysis_percent.
+# LLM never calls this.
+# ═══════════════════════════════════════════════════════════════════════════════
 
-STATUS_PROGRESS = {
-    "queued":           5,
-    "resolving_deps":   10,
-    "fetching_ec2":     15,
-    "fetching_metrics": 25,
-    "fetching_logs":    40,
-    "correlating":      65,
-    "building_rca":     80,
-    "completed":        100,
-    "failed":           0,
-}
+def _update_status(incident_id: str, status: str, percent: int | None = None) -> None:
+    """
+    Update incident status in DB.  Only called by Python — never by LLM.
 
-
-def _update_status(incident_id: str, status: str) -> None:
-    """Fallback direct status update (also called on failure path)."""
+    Valid states and their default percentages (WORKFLOW_STATES):
+      queued                  0
+      triage_started         10
+      infra_analysis         30
+      logs_analysis          60
+      ai_reasoning           80
+      remediation_generated  90
+      completed             100
+      failed                  0
+    """
+    pct = percent if percent is not None else WORKFLOW_STATES.get(status, 0)
+    logger.info(f"[Status] {incident_id} → {status} ({pct}%)")
     try:
         with get_db() as conn:
             with conn.cursor() as cur:
@@ -69,14 +80,128 @@ def _update_status(incident_id: str, status: str) -> None:
                         updated_at       = NOW()
                     WHERE id = %s
                     """,
-                    (status, STATUS_PROGRESS.get(status, 0), incident_id),
+                    (status, pct, incident_id),
                 )
+            conn.commit()
     except Exception as exc:
-        logger.error(f"[StatusUpdate] Failed: {exc}")
+        logger.error(f"[StatusUpdate] Failed for {incident_id}: {exc}")
 
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# DB persistence helpers — all writes centralised here
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _save_rca(incident_id: str, structured: dict,
+              ai_model: str = "langgraph-agent-v4") -> None:
+    """
+    Persist the 5-field RCA result from the agent.
+    Stores the full structured dict in analysis_result.
+    Sets analysis_status=completed, analysis_percent=100.
+
+    Schema stored:
+      probable_root_cause (str)
+      confidence          (int 0-100)
+      evidence            (list[str])
+      dependency_impact   (list[str])
+      recommended_actions (list[str])
+    """
+    probable_root_cause = structured.get("probable_root_cause", "")
+    confidence          = structured.get("confidence", 50)
+
+    # Normalise confidence: accept 0-100 int or 0.0-1.0 float
+    try:
+        confidence = float(confidence)
+        if confidence <= 1.0:
+            confidence = confidence * 100
+        confidence = round(confidence, 2)
+    except (TypeError, ValueError):
+        confidence = 50.0
+
+    # Build the analysis_result to store — the full 5-field schema
+    analysis_result = {
+        "probable_root_cause": probable_root_cause,
+        "confidence":          int(confidence),
+        "evidence":            structured.get("evidence", []),
+        "dependency_impact":   structured.get("dependency_impact", []),
+        "recommended_actions": structured.get("recommended_actions", []),
+    }
+
+    # remediation_steps = recommended_actions as JSON list
+    remediation_steps = structured.get("recommended_actions", [])
+
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE meyiconnect.insight_incidents
+                    SET
+                        analysis_status       = 'completed',
+                        analysis_percent      = 100,
+                        analysis_result       = %s,
+                        remediation_steps     = %s,
+                        confidence_score      = %s,
+                        ai_model_used         = %s,
+                        analysis_completed_at = NOW(),
+                        updated_at            = NOW()
+                    WHERE id = %s
+                    """,
+                    (
+                        json.dumps(analysis_result),
+                        json.dumps(remediation_steps),
+                        str(confidence),
+                        ai_model,
+                        incident_id,
+                    ),
+                )
+                logger.info(f"[SaveRCA] Updated {cur.rowcount} row(s) for {incident_id}")
+            conn.commit()
+    except Exception as exc:
+        logger.error(f"[SaveRCA] Failed for {incident_id}: {exc}")
+        raise
+
+
+# def _save_evidence(incident_id: str, structured: dict) -> None:
+#     """
+#     Persist raw evidence (EC2, metrics, logs) from structured result.
+#     Non-fatal if it fails — RCA is already saved.
+#     """
+#     ec2_json     = structured.get("ec2_details_json", "{}")
+#     metrics_json = structured.get("metrics_json", "{}")
+#     logs_json    = structured.get("logs_summary_json", "{}")
+#     logs_count   = int(structured.get("logs_count", 0))
+
+#     try:
+#         with get_db() as conn:
+#             with conn.cursor() as cur:
+#                 cur.execute(
+#                     """
+#                     INSERT INTO meyiconnect.incident_logs (
+#                         incident_id, ec2_details, ec2_status_checks,
+#                         cloudwatch_metrics, raw_logs, logs_count
+#                     )
+#                     VALUES (%s, %s, %s, %s, %s, %s)
+#                     ON CONFLICT (incident_id) DO UPDATE
+#                         SET cloudwatch_metrics = EXCLUDED.cloudwatch_metrics,
+#                             raw_logs           = EXCLUDED.raw_logs,
+#                             logs_count         = EXCLUDED.logs_count,
+#                             updated_at         = NOW()
+#                     RETURNING id
+#                     """,
+#                     (incident_id, ec2_json, "{}", metrics_json, logs_json, logs_count),
+#                 )
+#                 log_id = (cur.fetchone() or {}).get("id")
+#                 logger.info(f"[SaveEvidence] log_id={log_id} for {incident_id}")
+#             conn.commit()
+#     except Exception as exc:
+#         logger.error(f"[SaveEvidence] Failed for {incident_id}: {exc}")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# DB loaders
+# ═══════════════════════════════════════════════════════════════════════════════
 
 def _load_incident(incident_id: str) -> dict | None:
-    """Load incident row from DB."""
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -86,95 +211,280 @@ def _load_incident(incident_id: str) -> dict | None:
             return cur.fetchone()
 
 
-def _validate_incident(incident: dict, incident_id: str) -> str | None:
-    """Return error message if incident is not processable, else None."""
+def _load_project_by_tag(project_tag: str) -> dict | None:
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id, name, tag,
+                       aws_access_key_id,
+                       aws_secret_access_key,
+                       aws_region,
+                       dependencies
+                FROM meyiconnect.insight_projects
+                WHERE tag = %s
+                LIMIT 1
+                """,
+                (project_tag,),
+            )
+            return cur.fetchone()
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Validation
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _validate_incident(incident: dict | None, incident_id: str) -> str | None:
     if not incident:
         return f"Incident {incident_id} not found in DB"
-
     if not incident.get("incident_down_time"):
         return f"Missing incident_down_time for {incident_id}"
-
-    raw_deps = incident.get("dependencies") or []
-    if isinstance(raw_deps, str):
-        try:
-            raw_deps = json.loads(raw_deps)
-        except Exception:
-            raw_deps = []
-    if not raw_deps:
-        return f"No dependencies configured for {incident_id}"
-
     return None
 
 
-# ── Main entry point ──────────────────────────────────────────────────────────
+def _validate_project(project: dict | None, project_tag: str, incident_id: str) -> str | None:
+    if not project:
+        return f"No project found with tag '{project_tag}' for incident {incident_id}"
+    if not project.get("aws_access_key_id") or not project.get("aws_secret_access_key"):
+        return f"Project '{project_tag}' has no AWS credentials for incident {incident_id}"
+    return None
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Deterministic pre-resolve (Python, no LLM invoke)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _resolve_targets_deterministic() -> tuple[list[dict], dict | None]:
+    """
+    Call resolve_incident_targets() in Python before the agent starts.
+    Saves 1 LLM invoke vs letting the agent call it as its first tool.
+
+    Returns (targets, triage_result).
+    """
+    try:
+        result = resolve_incident_targets.invoke({})
+        targets       = result.get("targets", [])
+        triage_info   = pre_triage_targets(targets)
+        triage_result = triage_info.get("triage_result")
+
+        if triage_result:
+            logger.info(
+                f"[PreTriage] {triage_result['likely_issue']} | "
+                f"reason={triage_result['target_reason']} | "
+                f"confidence={triage_result['confidence']}"
+            )
+        else:
+            logger.info("[PreTriage] No short-circuit — full investigation")
+
+        return targets, triage_result
+
+    except Exception as exc:
+        logger.warning(f"[PreResolve] resolve_incident_targets failed: {exc}")
+        return [], None
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# P2 — Pre-extract RCA signals before first LLM invoke
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _pre_extract_signals(
+    targets: list[dict],
+    triage_result: dict | None,
+    incident_context: dict,
+) -> dict:
+    """
+    Run extract_rca_signals() on whatever we know BEFORE the LLM starts:
+      - ALB target reasons from resolved targets
+      - EC2 state if triage has instance info (state not yet known here,
+        but ALB reasons like Target.InvalidState strongly imply stopped)
+      - down_message text scanned for known error patterns
+
+    Returns the signals dict to embed in the initial HumanMessage.
+    """
+    alb_reasons = [
+        t.get("target_reason", "") for t in targets
+        if t.get("target_reason")
+    ]
+
+    # Scan the down_message for known log patterns
+    down_message = incident_context.get("down_message") or ""
+    log_samples  = [down_message] if down_message else []
+
+    signals = extract_rca_signals(
+        log_samples=log_samples,
+        ec2_state=None,              # not yet known — will be updated in tool_node
+        alb_target_reasons=alb_reasons,
+    )
+
+    if signals.get("primary_root_cause"):
+        logger.info(
+            f"[PreSignals] primary_root_cause={signals['primary_root_cause']['rca_type']} "
+            f"({signals['primary_root_cause']['confidence']:.0%})"
+        )
+    else:
+        logger.info("[PreSignals] No primary root cause extracted pre-LLM")
+
+    return signals
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Main entry point
+# ═══════════════════════════════════════════════════════════════════════════════
 
 def process_incident(payload: dict) -> None:
     """
     Process a single incident using the autonomous agentic investigation flow.
-
     Called by the worker thread pool with payload = {"incident_id": str}.
-    All incident data is loaded from the DB by the agent via tools.
-
-    Flow:
-      1. Load and validate incident from DB
-      2. Build AWSClientFactory with connector credentials
-      3. Initialise tools (inject factory + incident row)
-      4. Run LangGraph agent — it handles everything from here
-      5. Agent stores results in DB via store_rca_result tool
     """
     logger.info("=" * 60)
-    logger.info("INCIDENT PROCESSOR STARTED (Agentic Mode)")
+    logger.info("INCIDENT PROCESSOR v3 STARTED")
     logger.info("=" * 60)
 
     incident_id = payload.get("incident_id", "unknown")
 
     try:
-        # ── Step 1: Load incident ─────────────────────────────────────────
+        # ── 1. Load & validate incident ───────────────────────────────────────
         incident = _load_incident(incident_id)
         error    = _validate_incident(incident, incident_id)
         if error:
             logger.error(f"[Validate] {error}")
             _update_status(incident_id, "failed")
             return
-
         incident = dict(incident)
-        logger.info(
-            f"[Load] incident_id={incident_id} | "
-            f"issue={incident.get('issue', '')[:60]} | "
-            f"severity={incident.get('severity')}"
-        )
 
-        # ── Step 2: Build AWS factory ─────────────────────────────────────
-        connector_id = incident.get("connector_id")
-        try:
-            aws_factory = AWSClientFactory(connector_id)
-        except ValueError as exc:
-            logger.error(f"[AWS] Connector init failed: {exc}")
+        # ── 2. Load project ───────────────────────────────────────────────────
+        project_tag = incident.get("project_tag")
+        if not project_tag:
+            logger.error(f"[Project] No project_tag on incident {incident_id}")
             _update_status(incident_id, "failed")
             return
 
-        # ── Step 3: Initialise tools ──────────────────────────────────────
-        # Tools are module-level singletons — inject per-incident state here.
-        # The agent will call init_tools output via the tool layer.
-        init_tools(aws_factory=aws_factory, incident_row=incident)
+        project = _load_project_by_tag(project_tag)
+        error   = _validate_project(project, project_tag, incident_id)
+        if error:
+            logger.error(f"[Project] {error}")
+            _update_status(incident_id, "failed")
+            return
+        project = dict(project)
 
-        logger.info(f"[Tools] Initialised for incident {incident_id}")
-        _update_status(incident_id, "resolving_deps")
+        logger.info(
+            f"[Load] incident={incident_id} | "
+            f"project='{project.get('name')}' tag={project_tag} | "
+            f"region={project.get('aws_region')}"
+        )
 
-        # ── Step 4: Run the agent ─────────────────────────────────────────
-        # The agent drives the entire investigation from here:
-        # it loads context, resolves targets, fetches EC2/metrics/logs/CloudTrail,
-        # correlates, builds RCA, and stores results — all autonomously.
+        # ── 3. Build unified investigation context ────────────────────────────
+        def _parse_json_field(val, fallback=None):
+            if isinstance(val, str):
+                try:
+                    return json.loads(val)
+                except Exception:
+                    return fallback or []
+            return val or fallback or []
+
+        raw_deps     = _parse_json_field(incident.get("dependencies"))
+        project_deps = _parse_json_field(project.get("dependencies"))
+        final_deps   = raw_deps if raw_deps else project_deps
+
+        investigation_context = {
+            "incident_id":        incident_id,
+            "project_tag":        project_tag,
+            "monitor_name":       incident.get("monitor_name"),
+            "monitor_type":       incident.get("monitor_type"),
+            "monitor_url":        incident.get("monitor_url"),
+            "down_message":       incident.get("down_message"),
+            "incident_down_time": str(incident.get("incident_down_time")),
+            "aws_region":         project.get("aws_region"),
+            "dependencies":       final_deps,
+        }
+
+        if not final_deps:
+            logger.error(f"[Validate] No dependencies for {incident_id}")
+            _update_status(incident_id, "failed")
+            return
+
+        # ── 4. Build AWS factory ──────────────────────────────────────────────
+        try:
+            aws_factory = AWSClientFactory(project_tag=project_tag)
+        except ValueError as exc:
+            logger.error(f"[AWS] Factory init failed: {exc}")
+            _update_status(incident_id, "failed")
+            return
+
+        # ── 5. Inject tools context ───────────────────────────────────────────
+        init_tools(aws_factory=aws_factory, incident_row=investigation_context)
+        logger.info(f"[Tools] Initialised for {incident_id}")
+
+        # ── 6. P4: triage_started ─────────────────────────────────────────────
+        _update_status(incident_id, "triage_started")
+
+        # ── 7. Deterministic pre-resolve ──────────────────────────────────────
+        targets, triage_result = _resolve_targets_deterministic()
+
+        # ── 8. P2: Pre-extract RCA signals ────────────────────────────────────
+        rca_signals = _pre_extract_signals(targets, triage_result, investigation_context)
+
+        # ── 9. P8: Similar incident lookup ────────────────────────────────────
+        primary_rca_type = (
+            rca_signals.get("primary_root_cause", {}) or {}
+        ).get("rca_type")
+
+        similar_incidents = find_similar_incidents(
+            rca_type=primary_rca_type or "",
+            monitor_type=incident.get("monitor_type"),
+            limit=3,
+        )
+        if similar_incidents:
+            logger.info(f"[SimilarIncidents] Found {len(similar_incidents)} past incidents")
+
+        # ── 10. Update Status before Analysis ──────────────────────────────────
+        _update_status(incident_id, "infra_analysis")
+
+        # ── 11. P7: Build temporal correlation (best-effort, pre-LLM) ─────────
+        #
+        # We don't have infra events yet (that requires a CloudTrail call)
+        # but we can pre-build a skeleton timeline from triage timestamps.
+        # The agent will enrich this via get_infra_events() if needed.
+        #
+        timeline = None
+        try:
+            timeline = correlate_timeline(
+                infra_events=[],
+                log_anchor_ts=None,
+                incident_down_time=investigation_context["incident_down_time"],
+            )
+        except Exception as exc:
+            logger.warning(f"[Timeline] Pre-build failed: {exc}")
+
+        # ── 12. Run the agent ─────────────────────────────────────────────────
         result = run_agent_investigation(
             incident_id=incident_id,
-            aws_factory=aws_factory,
+            incident_context=investigation_context,
+            triage_result=triage_result,
+            rca_signals=rca_signals,
+            timeline=timeline,
+            similar_incidents=similar_incidents,
         )
+
+        structured  = result.get("structured_result")
+        structured  = result.get("structured_result")
 
         logger.info(
             f"[Agent] Finished | "
             f"tool_calls={result.get('tool_call_count')} | "
-            f"messages={result.get('message_count')}"
+            f"messages={result.get('message_count')} | "
+            f"structured={'yes' if structured else 'no'}"
         )
+
+        # ── 13. Persist results — all DB writes happen here ─────────────────
+        if structured:
+            _update_status(incident_id, "remediation_generated",
+                           WORKFLOW_STATES["remediation_generated"])
+            _save_rca(incident_id, structured)   # also sets status=completed, percent=100
+        else:
+            logger.error(f"[Agent] No structured result for {incident_id}.")
+            _update_status(incident_id, "failed")
+
         logger.info("=" * 60)
         logger.info(f"INCIDENT COMPLETED: {incident_id}")
         logger.info("=" * 60)
