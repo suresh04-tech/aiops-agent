@@ -36,12 +36,14 @@ from app.utils.aws_connector import AWSClientFactory
 from app.agent.tools import (
     init_tools,
     resolve_incident_targets,
+)
+from app.agent.evaluators import (
     pre_triage_targets,
     extract_rca_signals,
     correlate_timeline,
     find_similar_incidents,
-    WORKFLOW_STATES,
 )
+from app.agent.rules import WORKFLOW_STATES
 from app.agent.graph import run_agent_investigation
 
 logger = logging.getLogger(__name__)
@@ -254,16 +256,17 @@ def _validate_project(project: dict | None, project_tag: str, incident_id: str) 
 # Deterministic pre-resolve (Python, no LLM invoke)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def _resolve_targets_deterministic() -> tuple[list[dict], dict | None]:
+def _resolve_targets_deterministic() -> tuple[list[dict], dict | None, dict]:
     """
     Call resolve_incident_targets() in Python before the agent starts.
     Saves 1 LLM invoke vs letting the agent call it as its first tool.
 
-    Returns (targets, triage_result).
+    Returns (targets, triage_result, alb_meta).
     """
     try:
         result = resolve_incident_targets.invoke({})
         targets       = result.get("targets", [])
+        alb_meta      = result.get("alb_meta", {})
         triage_info   = pre_triage_targets(targets)
         triage_result = triage_info.get("triage_result")
 
@@ -276,11 +279,11 @@ def _resolve_targets_deterministic() -> tuple[list[dict], dict | None]:
         else:
             logger.info("[PreTriage] No short-circuit — full investigation")
 
-        return targets, triage_result
+        return targets, triage_result, alb_meta
 
     except Exception as exc:
         logger.warning(f"[PreResolve] resolve_incident_targets failed: {exc}")
-        return [], None
+        return [], None, {}
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -419,7 +422,7 @@ def process_incident(payload: dict) -> None:
         _update_status(incident_id, "triage_started")
 
         # ── 7. Deterministic pre-resolve ──────────────────────────────────────
-        targets, triage_result = _resolve_targets_deterministic()
+        targets, triage_result, alb_meta = _resolve_targets_deterministic()
 
         # ── 8. P2: Pre-extract RCA signals ────────────────────────────────────
         rca_signals = _pre_extract_signals(targets, triage_result, investigation_context)
@@ -464,6 +467,8 @@ def process_incident(payload: dict) -> None:
             rca_signals=rca_signals,
             timeline=timeline,
             similar_incidents=similar_incidents,
+            resolved_targets=targets,
+            alb_meta=alb_meta,
         )
 
         structured  = result.get("structured_result")

@@ -50,7 +50,7 @@ from typing import Optional, Callable
 logger = logging.getLogger(__name__)
 
 # ─── Tunables ─────────────────────────────────────────────────────────────────
-DEFAULT_SCAN_BEFORE_MINUTES    = 30
+DEFAULT_SCAN_BEFORE_MINUTES    = 15
 DEFAULT_SCAN_AFTER_MINUTES     = 10
 FIRST_ERROR_PRE_BUFFER_MINUTES = 5
 IMPACT_WINDOW_MINUTES          = 10
@@ -129,31 +129,31 @@ _WEIGHT_RULES: list[tuple[re.Pattern, int, str]] = [
     (re.compile(r"forbidden|403",                                           re.I),   3, "http-403"),
 ]
 
-# CloudTrail API calls that indicate deployment / change events
-_DEPLOYMENT_API_CALLS = {
-    # EC2
-    "RunInstances", "TerminateInstances", "StopInstances", "StartInstances",
-    "RebootInstances", "ModifyInstanceAttribute",
-    # ECS
-    "UpdateService", "CreateService", "DeleteService", "RunTask",
-    # Lambda
-    "UpdateFunctionCode", "UpdateFunctionConfiguration", "PublishVersion",
-    "CreateAlias", "UpdateAlias",
-    # Auto Scaling
-    "UpdateAutoScalingGroup", "ExecutePolicy", "TerminateInstanceInAutoScalingGroup",
-    # CodeDeploy
-    "CreateDeployment",
-    # Systems Manager
-    "SendCommand", "StartAutomationExecution",
-    # Secrets / Config
-    "PutSecretValue", "RotateSecret",
-    "PutConfigurationRecorder",
-    # IAM (permission changes can cause outages)
-    "AttachRolePolicy", "DetachRolePolicy", "PutRolePolicy", "DeleteRolePolicy",
-    # Load Balancer
-    "ModifyTargetGroupAttributes", "RegisterTargets", "DeregisterTargets",
-    "CreateRule", "DeleteRule",
-}
+# # CloudTrail API calls that indicate deployment / change events
+# _DEPLOYMENT_API_CALLS = {
+#     # EC2
+#     "RunInstances", "TerminateInstances", "StopInstances", "StartInstances",
+#     "RebootInstances", "ModifyInstanceAttribute",
+#     # ECS
+#     "UpdateService", "CreateService", "DeleteService", "RunTask",
+#     # Lambda
+#     "UpdateFunctionCode", "UpdateFunctionConfiguration", "PublishVersion",
+#     "CreateAlias", "UpdateAlias",
+#     # Auto Scaling
+#     "UpdateAutoScalingGroup", "ExecutePolicy", "TerminateInstanceInAutoScalingGroup",
+#     # CodeDeploy
+#     "CreateDeployment",
+#     # Systems Manager
+#     "SendCommand", "StartAutomationExecution",
+#     # Secrets / Config
+#     "PutSecretValue", "RotateSecret",
+#     "PutConfigurationRecorder",
+#     # IAM (permission changes can cause outages)
+#     "AttachRolePolicy", "DetachRolePolicy", "PutRolePolicy", "DeleteRolePolicy",
+#     # Load Balancer
+#     "ModifyTargetGroupAttributes", "RegisterTargets", "DeregisterTargets",
+#     "CreateRule", "DeleteRule",
+# }
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -737,102 +737,102 @@ def _tag_clusters_with_cascade(clusters: list[dict],
 # DEPLOYMENT CORRELATION (called from process_incident.py)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def fetch_deployment_events(
-    cloudtrail_client,
-    instance_id:        str,
-    investigation_start: datetime,
-    investigation_end:   datetime,
-    region:             str = "ap-south-1",
-) -> list[dict]:
-    """
-    Query CloudTrail for deployment and change events in the investigation window.
+# def fetch_deployment_events(
+#     cloudtrail_client,
+#     instance_id:        str,
+#     investigation_start: datetime,
+#     investigation_end:   datetime,
+#     region:             str = "ap-south-1",
+# ) -> list[dict]:
+#     """
+#     Query CloudTrail for deployment and change events in the investigation window.
 
-    Returns a chronological list of change events so the AI can correlate
-    "deployment at 14:58 → outage at 15:00" even when application logs
-    show only downstream symptoms.
+#     Returns a chronological list of change events so the AI can correlate
+#     "deployment at 14:58 → outage at 15:00" even when application logs
+#     show only downstream symptoms.
 
-    Each returned event:
-    {
-        "ts":           ISO str,
-        "event_name":   str,
-        "event_source": str,
-        "user":         str,
-        "resources":    [str],
-        "category":     str,   "deployment" | "scaling" | "config" | "iam"
-    }
-    """
-    events: list[dict] = []
+#     Each returned event:
+#     {
+#         "ts":           ISO str,
+#         "event_name":   str,
+#         "event_source": str,
+#         "user":         str,
+#         "resources":    [str],
+#         "category":     str,   "deployment" | "scaling" | "config" | "iam"
+#     }
+#     """
+#     events: list[dict] = []
 
-    try:
-        paginator = cloudtrail_client.get_paginator("lookup_events")
-        pages     = paginator.paginate(
-            StartTime=investigation_start,
-            EndTime=investigation_end,
-            LookupAttributes=[],   # no filter — we filter locally below
-            PaginationConfig={"MaxItems": 1000, "PageSize": 50},
-        )
+#     try:
+#         paginator = cloudtrail_client.get_paginator("lookup_events")
+#         pages     = paginator.paginate(
+#             StartTime=investigation_start,
+#             EndTime=investigation_end,
+#             LookupAttributes=[],   # no filter — we filter locally below
+#             PaginationConfig={"MaxItems": 1000, "PageSize": 50},
+#         )
 
-        for page in pages:
-            for raw in page.get("Events", []):
-                name = raw.get("EventName", "")
-                if name not in _DEPLOYMENT_API_CALLS:
-                    continue
+#         for page in pages:
+#             for raw in page.get("Events", []):
+#                 name = raw.get("EventName", "")
+#                 if name not in _DEPLOYMENT_API_CALLS:
+#                     continue
 
-                # Categorise
-                if name in {
-                    "RunInstances", "TerminateInstances", "StopInstances",
-                    "StartInstances", "RebootInstances",
-                    "UpdateService", "CreateService", "DeleteService",
-                    "UpdateFunctionCode", "UpdateFunctionConfiguration",
-                    "CreateDeployment", "RunTask",
-                }:
-                    category = "deployment"
-                elif name in {
-                    "UpdateAutoScalingGroup", "ExecutePolicy",
-                    "TerminateInstanceInAutoScalingGroup",
-                }:
-                    category = "scaling"
-                elif name in {
-                    "PutSecretValue", "RotateSecret", "PutConfigurationRecorder",
-                    "SendCommand", "StartAutomationExecution",
-                    "ModifyInstanceAttribute",
-                    "ModifyTargetGroupAttributes", "RegisterTargets",
-                    "DeregisterTargets", "CreateRule", "DeleteRule",
-                }:
-                    category = "config"
-                elif name in {
-                    "AttachRolePolicy", "DetachRolePolicy",
-                    "PutRolePolicy", "DeleteRolePolicy",
-                }:
-                    category = "iam"
-                else:
-                    category = "other"
+#                 # Categorise
+#                 if name in {
+#                     "RunInstances", "TerminateInstances", "StopInstances",
+#                     "StartInstances", "RebootInstances",
+#                     "UpdateService", "CreateService", "DeleteService",
+#                     "UpdateFunctionCode", "UpdateFunctionConfiguration",
+#                     "CreateDeployment", "RunTask",
+#                 }:
+#                     category = "deployment"
+#                 elif name in {
+#                     "UpdateAutoScalingGroup", "ExecutePolicy",
+#                     "TerminateInstanceInAutoScalingGroup",
+#                 }:
+#                     category = "scaling"
+#                 elif name in {
+#                     "PutSecretValue", "RotateSecret", "PutConfigurationRecorder",
+#                     "SendCommand", "StartAutomationExecution",
+#                     "ModifyInstanceAttribute",
+#                     "ModifyTargetGroupAttributes", "RegisterTargets",
+#                     "DeregisterTargets", "CreateRule", "DeleteRule",
+#                 }:
+#                     category = "config"
+#                 elif name in {
+#                     "AttachRolePolicy", "DetachRolePolicy",
+#                     "PutRolePolicy", "DeleteRolePolicy",
+#                 }:
+#                     category = "iam"
+#                 else:
+#                     category = "other"
 
-                user = (
-                    raw.get("Username") or
-                    raw.get("UserIdentity", {}).get("arn", "unknown")
-                )
-                resources = [
-                    r.get("ResourceName", "")
-                    for r in raw.get("Resources", [])
-                    if r.get("ResourceName")
-                ]
+#                 user = (
+#                     raw.get("Username") or
+#                     raw.get("UserIdentity", {}).get("arn", "unknown")
+#                 )
+#                 resources = [
+#                     r.get("ResourceName", "")
+#                     for r in raw.get("Resources", [])
+#                     if r.get("ResourceName")
+#                 ]
 
-                events.append({
-                    "ts":           raw["EventTime"].isoformat(),
-                    "event_name":   name,
-                    "event_source": raw.get("EventSource", ""),
-                    "user":         user,
-                    "resources":    resources,
-                    "category":     category,
-                })
+#                 events.append({
+#                     "ts":           raw["EventTime"].isoformat(),
+#                     "event_name":   name,
+#                     "event_source": raw.get("EventSource", ""),
+#                     "user":         user,
+#                     "resources":    resources,
+#                     "category":     category,
+#                 })
 
-    except Exception as exc:
-        logger.warning(f"CloudTrail lookup failed: {exc}")
+#     except Exception as exc:
+#         logger.warning(f"CloudTrail lookup failed: {exc}")
 
-    events.sort(key=lambda e: e["ts"])
-    logger.info(f"[CloudTrail] Found {len(events)} deployment/change events")
-    return events
+#     events.sort(key=lambda e: e["ts"])
+#     logger.info(f"[CloudTrail] Found {len(events)} deployment/change events")
+#     return events
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

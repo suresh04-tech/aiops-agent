@@ -8,17 +8,21 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import queue
 from app.queue.manager import queue_manager
 from app.processor.worker import start_worker
+from logging.handlers import RotatingFileHandler
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s — %(message)s",
     handlers=[
-        logging.FileHandler("logs/aiops.log"),
+        RotatingFileHandler(
+            "logs/aiops.log",
+            maxBytes=10 * 1024 * 1024,
+            backupCount=5
+        ),
         logging.StreamHandler()
     ]
 )
 logger = logging.getLogger(__name__)
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

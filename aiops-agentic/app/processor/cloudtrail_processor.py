@@ -587,112 +587,112 @@ def _generate_infra_hypotheses(
 # PROMPT FORMATTER
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def format_infra_context_for_prompt(infra_ctx: dict) -> str:
-    """
-    Convert infra_ctx into a compact, AI-readable block for the Bedrock prompt.
+# def format_infra_context_for_prompt(infra_ctx: dict) -> str:
+#     """
+#     Convert infra_ctx into a compact, AI-readable block for the Bedrock prompt.
 
-    Format:
-        ╔═ INFRASTRUCTURE CHANGE EVENTS ═════════════════════════════════════
-        ║ Total events in window: 7  |  High-risk: 3  |  Failed API calls: 1
-        ║
-        ║ ── HIGH-RISK EVENTS (ranked by proximity × risk) ─────────────────
-        ║  [RISK:10] DeregisterTargets | user: ops-role | res: tg-prod-api
-        ║            ⚡ 3.2m before first error — HIGHLY SUSPICIOUS
-        ║            ts: 2026-05-15T09:45:11Z
-        ║
-        ║  [RISK:8]  UpdateService | user: deploy-pipeline | res: svc-api
-        ║            ⚠ 12.1m before first error — suspicious
-        ║            ts: 2026-05-15T09:36:22Z
-        ║
-        ║ ── ROOT CAUSE HYPOTHESES (infra side) ─────────────────────────────
-        ║  [HIGH] Instance removed from LB target group 3m before outage.
-        ║         Cross-reference: expect 'connection refused' in nginx logs.
-        ║
-        ║ ── FAILED API CALLS ───────────────────────────────────────────────
-        ║  UpdateStack → AccessDeniedException  (user: deploy-user)
-        ║
-        ║ ── CHANGES BY USER ────────────────────────────────────────────────
-        ║  deploy-pipeline: 4 changes | ops-role: 2 | root: 1
-        ╚════════════════════════════════════════════════════════════════════
-    """
-    if not infra_ctx or infra_ctx.get("total_events", 0) == 0:
-        return "No infrastructure change events found in the investigation window."
+#     Format:
+#         ╔═ INFRASTRUCTURE CHANGE EVENTS ═════════════════════════════════════
+#         ║ Total events in window: 7  |  High-risk: 3  |  Failed API calls: 1
+#         ║
+#         ║ ── HIGH-RISK EVENTS (ranked by proximity × risk) ─────────────────
+#         ║  [RISK:10] DeregisterTargets | user: ops-role | res: tg-prod-api
+#         ║            ⚡ 3.2m before first error — HIGHLY SUSPICIOUS
+#         ║            ts: 2026-05-15T09:45:11Z
+#         ║
+#         ║  [RISK:8]  UpdateService | user: deploy-pipeline | res: svc-api
+#         ║            ⚠ 12.1m before first error — suspicious
+#         ║            ts: 2026-05-15T09:36:22Z
+#         ║
+#         ║ ── ROOT CAUSE HYPOTHESES (infra side) ─────────────────────────────
+#         ║  [HIGH] Instance removed from LB target group 3m before outage.
+#         ║         Cross-reference: expect 'connection refused' in nginx logs.
+#         ║
+#         ║ ── FAILED API CALLS ───────────────────────────────────────────────
+#         ║  UpdateStack → AccessDeniedException  (user: deploy-user)
+#         ║
+#         ║ ── CHANGES BY USER ────────────────────────────────────────────────
+#         ║  deploy-pipeline: 4 changes | ops-role: 2 | root: 1
+#         ╚════════════════════════════════════════════════════════════════════
+#     """
+#     if not infra_ctx or infra_ctx.get("total_events", 0) == 0:
+#         return "No infrastructure change events found in the investigation window."
 
-    lines = []
-    lines.append("╔═ INFRASTRUCTURE CHANGE EVENTS (CloudTrail)")
+#     lines = []
+#     lines.append("╔═ INFRASTRUCTURE CHANGE EVENTS (CloudTrail)")
 
-    total       = infra_ctx.get("total_events", 0)
-    high_risk   = infra_ctx.get("high_risk_events", [])
-    failed      = infra_ctx.get("failed_api_calls", [])
-    by_user     = infra_ctx.get("by_user", {})
-    hypotheses  = infra_ctx.get("hypotheses", [])
-    first_error = infra_ctx.get("first_error_ts")
-    detect_time = infra_ctx.get("detection_time")
-    window      = infra_ctx.get("window", {})
+#     total       = infra_ctx.get("total_events", 0)
+#     high_risk   = infra_ctx.get("high_risk_events", [])
+#     failed      = infra_ctx.get("failed_api_calls", [])
+#     by_user     = infra_ctx.get("by_user", {})
+#     hypotheses  = infra_ctx.get("hypotheses", [])
+#     first_error = infra_ctx.get("first_error_ts")
+#     detect_time = infra_ctx.get("detection_time")
+#     window      = infra_ctx.get("window", {})
 
-    lines.append(
-        f"║ Scan window : {window.get('start', 'n/a')} → {window.get('end', 'n/a')}"
-    )
-    lines.append(
-        f"║ Total events: {total}  |  "
-        f"High-risk: {len(high_risk)}  |  "
-        f"Failed API calls: {len(failed)}"
-    )
-    if first_error:
-        lines.append(f"║ First log error anchor : {first_error}")
-    if detect_time:
-        lines.append(f"║ Health-check detection : {detect_time}")
-    lines.append("║")
+#     lines.append(
+#         f"║ Scan window : {window.get('start', 'n/a')} → {window.get('end', 'n/a')}"
+#     )
+#     lines.append(
+#         f"║ Total events: {total}  |  "
+#         f"High-risk: {len(high_risk)}  |  "
+#         f"Failed API calls: {len(failed)}"
+#     )
+#     if first_error:
+#         lines.append(f"║ First log error anchor : {first_error}")
+#     if detect_time:
+#         lines.append(f"║ Health-check detection : {detect_time}")
+#     lines.append("║")
 
-    # High-risk events
-    lines.append("║ ── HIGH-RISK EVENTS (ranked: proximity × risk) ─────────────────")
-    if high_risk:
-        for ev in high_risk[:10]:
-            res_str = ", ".join(ev["resources"][:2]) or "n/a"
-            lines.append(
-                f"║  [RISK:{ev['risk_score']:02d}] {ev['event_name']} | "
-                f"user: {ev['user']} | resource: {res_str}"
-            )
-            lines.append(f"║           {ev.get('proximity_label', '')}")
-            lines.append(f"║           ts: {ev['ts']}")
-            if ev.get("count", 1) > 1:
-                lines.append(f"║           (repeated {ev['count']}x)")
-            lines.append("║")
-    else:
-        lines.append("║  (none above risk threshold)")
-        lines.append("║")
+#     # High-risk events
+#     lines.append("║ ── HIGH-RISK EVENTS (ranked: proximity × risk) ─────────────────")
+#     if high_risk:
+#         for ev in high_risk[:10]:
+#             res_str = ", ".join(ev["resources"][:2]) or "n/a"
+#             lines.append(
+#                 f"║  [RISK:{ev['risk_score']:02d}] {ev['event_name']} | "
+#                 f"user: {ev['user']} | resource: {res_str}"
+#             )
+#             lines.append(f"║           {ev.get('proximity_label', '')}")
+#             lines.append(f"║           ts: {ev['ts']}")
+#             if ev.get("count", 1) > 1:
+#                 lines.append(f"║           (repeated {ev['count']}x)")
+#             lines.append("║")
+#     else:
+#         lines.append("║  (none above risk threshold)")
+#         lines.append("║")
 
-    # Hypotheses
-    lines.append("║ ── ROOT CAUSE HYPOTHESES (infra-side) ──────────────────────────")
-    if hypotheses:
-        for h in hypotheses:
-            tag = "HIGH" if h["confidence"] == "high" else "MED "
-            lines.append(f"║  [{tag}] {h['hypothesis']}")
-            lines.append(f"║         Verify in logs: look for errors starting at {h['ts']}")
-            lines.append("║")
-    else:
-        lines.append("║  No high-confidence infra hypothesis (no changes close to first error).")
-        lines.append("║  Root cause is more likely application-side — see log analysis above.")
-        lines.append("║")
+#     # Hypotheses
+#     lines.append("║ ── ROOT CAUSE HYPOTHESES (infra-side) ──────────────────────────")
+#     if hypotheses:
+#         for h in hypotheses:
+#             tag = "HIGH" if h["confidence"] == "high" else "MED "
+#             lines.append(f"║  [{tag}] {h['hypothesis']}")
+#             lines.append(f"║         Verify in logs: look for errors starting at {h['ts']}")
+#             lines.append("║")
+#     else:
+#         lines.append("║  No high-confidence infra hypothesis (no changes close to first error).")
+#         lines.append("║  Root cause is more likely application-side — see log analysis above.")
+#         lines.append("║")
 
-    # Failed API calls
-    if failed:
-        lines.append("║ ── FAILED INFRA API CALLS ──────────────────────────────────────")
-        for ev in failed[:5]:
-            res_str = ", ".join(ev["resources"][:1]) or "n/a"
-            lines.append(
-                f"║  {ev['event_name']} → {ev['error_code']} "
-                f"(user: {ev['user']}, res: {res_str})"
-            )
-        lines.append("║")
+#     # Failed API calls
+#     if failed:
+#         lines.append("║ ── FAILED INFRA API CALLS ──────────────────────────────────────")
+#         for ev in failed[:5]:
+#             res_str = ", ".join(ev["resources"][:1]) or "n/a"
+#             lines.append(
+#                 f"║  {ev['event_name']} → {ev['error_code']} "
+#                 f"(user: {ev['user']}, res: {res_str})"
+#             )
+#         lines.append("║")
 
-    # Changes by user
-    lines.append("║ ── CHANGES BY USER ─────────────────────────────────────────────")
-    user_parts = [f"{u}: {c}" for u, c in list(by_user.items())[:6]]
-    lines.append("║  " + "  |  ".join(user_parts) if user_parts else "║  (none)")
+#     # Changes by user
+#     lines.append("║ ── CHANGES BY USER ─────────────────────────────────────────────")
+#     user_parts = [f"{u}: {c}" for u, c in list(by_user.items())[:6]]
+#     lines.append("║  " + "  |  ".join(user_parts) if user_parts else "║  (none)")
 
-    lines.append("╚" + "═" * 60)
-    return "\n".join(lines)
+#     lines.append("╚" + "═" * 60)
+#     return "\n".join(lines)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

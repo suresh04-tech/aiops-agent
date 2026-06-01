@@ -1,327 +1,676 @@
 ============================================================
-2026-05-29 12:58:22,163 [INFO] app.processor.process_incident — INCIDENT PROCESSOR v3 STARTED
-2026-05-29 12:58:22,164 [INFO] app.processor.process_incident — ============================================================
-2026-05-29 12:58:30,876 [INFO] app.processor.process_incident — [Load] incident=6554e9eb-2206-487a-a7c6-c4229356f496 | project='AIOps Production' tag=aiops-prod | region=us-east-1
-2026-05-29 12:58:33,363 [INFO] app.utils.aws_connector — [AWSClientFactory] Loaded credentials for project 'aiops-prod' region=us-east-1
-2026-05-29 12:58:33,366 [INFO] app.processor.process_incident — [Tools] Initialised for 6554e9eb-2206-487a-a7c6-c4229356f496
-2026-05-29 12:58:33,367 [INFO] app.processor.process_incident — [Status] 6554e9eb-2206-487a-a7c6-c4229356f496 → triage_started (10%)
-2026-05-29 12:58:37,256 [INFO] app.processor.dependency_resolver — [ALB resolver] Matched DNS 'aiops-alb-1937945577.us-east-1.elb.amazonaws.com' → ARN 'arn:aws:elasticloadbalancing:us-east-1:369606757523:loadbalancer/app/aiops-alb/55261edb7427e571'
-2026-05-29 12:58:37,839 [INFO] app.processor.dependency_resolver — [ALB resolver] Found target i-01cbe3e1e9e371033 state=healthy reason=None
-2026-05-29 12:58:37,840 [INFO] app.processor.dependency_resolver — [ALB resolver] Found target i-0d7409065a555843e state=healthy reason=None
-2026-05-29 12:58:37,841 [INFO] app.processor.dependency_resolver — [ALB resolver] Total targets for ALB: 2
-2026-05-29 12:58:37,843 [INFO] app.processor.dependency_resolver — [DependencyResolver] Resolved 1 dep(s) → 2 unique EC2 target(s): ['i-01cbe3e1e9e371033', 'i-0d7409065a555843e']
-2026-05-29 12:58:37,843 [INFO] app.processor.process_incident — [PreTriage] No short-circuit — full investigation
-2026-05-29 12:58:37,844 [INFO] app.processor.process_incident — [PreSignals] No primary root cause extracted pre-LLM
-2026-05-29 12:58:40,157 [INFO] app.processor.process_incident — [Status] 6554e9eb-2206-487a-a7c6-c4229356f496 → infra_analysis (30%)
-2026-05-29 12:58:42,700 [INFO] app.agent.graph — [Agent] Starting investigation for incident 6554e9eb-2206-487a-a7c6-c4229356f496
-2026-05-29 12:58:44,962 [INFO] app.utils.aws_connector — [BedrockClientFactory] Loaded Bedrock credentials region=ap-south-1
-2026-05-29 12:58:45,270 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
-2026-05-29 12:58:46,334 [INFO] app.agent.graph — [Agent] turn complete | tool_calls=1
-2026-05-29 12:58:46,339 [INFO] app.agent.graph — [ToolNode] resolve_incident_targets | args={}
-2026-05-29 12:58:47,719 [INFO] app.processor.dependency_resolver — [ALB resolver] Matched DNS 'aiops-alb-1937945577.us-east-1.elb.amazonaws.com' → ARN 'arn:aws:elasticloadbalancing:us-east-1:369606757523:loadbalancer/app/aiops-alb/55261edb7427e571'
-2026-05-29 12:58:48,286 [INFO] app.processor.dependency_resolver — [ALB resolver] Found target i-01cbe3e1e9e371033 state=healthy reason=None
-2026-05-29 12:58:48,287 [INFO] app.processor.dependency_resolver — [ALB resolver] Found target i-0d7409065a555843e state=healthy reason=None
-2026-05-29 12:58:48,290 [INFO] app.processor.dependency_resolver — [ALB resolver] Total targets for ALB: 2
-2026-05-29 12:58:48,293 [INFO] app.processor.dependency_resolver — [DependencyResolver] Resolved 1 dep(s) → 2 unique EC2 target(s): ['i-01cbe3e1e9e371033', 'i-0d7409065a555843e']
-2026-05-29 12:58:48,294 [INFO] app.agent.graph — [ToolNode] resolve_incident_targets result: {"targets": [{"instance_id": "i-01cbe3e1e9e371033", "region": "us-east-1", "log_groups": ["alike-prod-backend-app-logs", "alike-prod-backend-logs", "alike-prod-backend-system-logs"], "target_health": "healthy", "target_reason": ""}, {"instance_id": "i-0d7409065a555843e", "region": "us-east-1", "log_groups": ["alike-prod-backend-app-logs", "alike-prod-backend-logs", "alike-prod-backend-system-logs"], "target_health": "healthy", "target_reason": ""}], "alb_meta": {"alb_dns": "aiops-alb-1937945577.us-east-1.elb.amazonaws.com", "alb_arn": "arn:aws:elasticloadbalancing:us-east-1:369606757523:loadbalancer/app/aiops-alb/55261edb7427e571", "targets": [{"instance_id": "i-01cbe3e1e9e371033", "health": "healthy", "reason": "", "description": "", "target_group_arn": "arn:aws:elasticloadbalancing:us-east-1:369606757523:targetgroup/aiops-target-group/73715f318e60517d"}, {"instance_id": "i-0d7409065a555843e", "health": "healthy", "reason": "", "description": "", "target_group_arn": "arn:aws:elasticloadbalancing:us-east-1:369606757523:targetgroup/aiops-target-group/73715f318e60517d"}], "total": 2, "healthy": 2, "unhealthy": 0}}
-2026-05-29 12:58:48,298 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
-2026-05-29 12:58:49,826 [INFO] app.agent.graph — [Agent] turn complete | tool_calls=1
-2026-05-29 12:58:49,831 [INFO] app.agent.graph — [ToolNode] get_ec2_analysis | args={"instance_ids": ["i-01cbe3e1e9e371033", "i-0d7409065a555843e"]}
-2026-05-29 12:58:49,838 [INFO] app.processor.process_incident — [Status] 6554e9eb-2206-487a-a7c6-c4229356f496 → infra_analysis (30%)
-2026-05-29 12:58:58,452 [INFO] app.agent.graph — [ToolNode] get_ec2_analysis result: {"instances": {"i-01cbe3e1e9e371033": {"details": {"instance_id": "i-01cbe3e1e9e371033", "instance_type": "t3.micro", "state": "running", "private_ip": "172.31.22.201", "public_ip": "54.196.160.33", "availability_zone": "us-east-1c", "launch_time": "2026-05-29 06:00:43+00:00", "ami_id": "ami-091138d0f0d41ff90", "security_groups": [{"id": "sg-02dc2192e316318b4", "name": "launch-wizard-10"}], "tags": {"Created_by": "suresh", "Project": "Aiops", "Name": "Alike-prod-backend", "Created_for": "testing"}}, "status_checks": {"instance_status": "ok", "system_status": "ok"}, "metrics": {"cpu_percent": 1.0583393526290814, "network_in_bytes": 50906.0, "network_out_bytes": 56623.666666666664, "disk_read_ops": null, "disk_write_ops": null, "status_check_failed": 0.0, "window_minutes": 15}}, "i-0d7409065a555843e": {"details": {"instance_id": "i-0d7409065a555843e", "instance_type": "t3.micro", "state": "running", "private_ip": "172.31.3.63", "public_ip": "44.204.202.104", "availability_zone": "us-east-1a", "launch_time": "2026-05-29 06:00:43+00:00", "ami_id": "ami-091138d0f0d41ff90", "security_groups": [{"id": "sg-04f1675ba6b3bff6e", "name": "launch-wizard-12"}], "tags": {"Name": "aiops-test", "Created_by": "suresh", "Created_for": "aiops-test", "Project": "meyiconnect-Aiops"}}, "status_checks": {"instance_status": "ok", "system_status": "ok"}, "metrics": {"cpu_percent": 1.143763982830724, "network_in_bytes": 27894.0, "network_out_bytes": 33582.75, "disk_read_ops": null, "disk_write_ops": null, "status_check_failed": 0.0, "window_minutes": 15}}}}
-2026-05-29 12:58:58,459 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
-2026-05-29 12:59:00,142 [INFO] app.agent.graph — [Agent] turn complete | tool_calls=1
-2026-05-29 12:59:00,147 [INFO] app.agent.graph — [ToolNode] get_compressed_logs | args={"log_groups": ["alike-prod-backend-app-logs", "alike-prod-backend-logs", "alike-prod-backend-system-logs"]}
-2026-05-29 12:59:00,149 [INFO] app.processor.process_incident — [Status] 6554e9eb-2206-487a-a7c6-c4229356f496 → logs_analysis (60%)
-2026-05-29 12:59:05,663 [INFO] app.processor.log_processor — [Start] down_time=07:14:29 | window=-30min/+10min | groups=['alike-prod-backend-app-logs', 'alike-prod-backend-logs', 'alike-prod-backend-system-logs']
-2026-05-29 12:59:06,793 [INFO] app.processor.log_processor — [CW] alike-prod-backend-logs: 0 events in 1 page(s)
-2026-05-29 12:59:06,796 [INFO] app.processor.log_processor — [Phase-A] alike-prod-backend-logs: 0/0 error events [06:44 – 07:24]
-2026-05-29 12:59:09,451 [INFO] app.processor.log_processor — [CW] alike-prod-backend-app-logs: 599 events in 2 page(s)
-2026-05-29 12:59:09,504 [INFO] app.processor.log_processor — [Phase-A] alike-prod-backend-app-logs: 28/599 error events [06:44 – 07:24]
-2026-05-29 12:59:10,234 [INFO] app.processor.log_processor — [CW] alike-prod-backend-system-logs: 335 events in 2 page(s)
-2026-05-29 12:59:10,256 [INFO] app.processor.log_processor — [Phase-A] alike-prod-backend-system-logs: 6/335 error events [06:44 – 07:24]
-2026-05-29 12:59:10,259 [INFO] app.processor.log_processor — [Phase-A] 34 total error events
-2026-05-29 12:59:10,261 [INFO] app.processor.log_processor — [Phase-B] Found sustained spike starting at 07:14:23 with 33 errors in 5m
-2026-05-29 12:59:10,262 [INFO] app.processor.log_processor — [Phase-B] First error: 07:14:23 in alike-prod-backend-app-logs | true_start anchored → 07:09:23
-2026-05-29 12:59:10,263 [INFO] app.processor.log_processor — [Timeline Stages]
-  buildup: 07:09:23 → 07:14:23
-  failure: 07:14:23 → 07:14:29
-  impact: 07:14:29 → 07:24:29
-2026-05-29 12:59:10,766 [INFO] app.processor.log_processor — [CW] alike-prod-backend-app-logs: 13 events in 2 page(s)
-2026-05-29 12:59:10,770 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-app-logs / failure: 13 lines [07:14 – 07:14]
-2026-05-29 12:59:10,833 [INFO] app.processor.log_processor — [CW] alike-prod-backend-app-logs: 52 events in 2 page(s)
-2026-05-29 12:59:10,838 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-app-logs / buildup: 52 lines [07:09 – 07:14]
-2026-05-29 12:59:11,259 [INFO] app.processor.log_processor — [CW] alike-prod-backend-logs: 0 events in 1 page(s)
-2026-05-29 12:59:11,260 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-logs / impact: 0 lines [07:14 – 07:24]
-2026-05-29 12:59:11,322 [INFO] app.processor.log_processor — [CW] alike-prod-backend-logs: 0 events in 1 page(s)
-2026-05-29 12:59:11,324 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-logs / failure: 0 lines [07:14 – 07:14]
-2026-05-29 12:59:11,687 [INFO] app.processor.log_processor — [CW] alike-prod-backend-system-logs: 30 events in 2 page(s)
-2026-05-29 12:59:11,690 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-system-logs / buildup: 30 lines [07:09 – 07:14]
-2026-05-29 12:59:11,713 [INFO] app.processor.log_processor — [CW] alike-prod-backend-app-logs: 289 events in 2 page(s)
-2026-05-29 12:59:11,718 [INFO] app.processor.log_processor — [CW] alike-prod-backend-logs: 0 events in 1 page(s)
-2026-05-29 12:59:11,720 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-app-logs / impact: 289 lines [07:14 – 07:24]
-2026-05-29 12:59:11,725 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-logs / buildup: 0 lines [07:09 – 07:14]
-2026-05-29 12:59:11,815 [INFO] app.processor.log_processor — [CW] alike-prod-backend-system-logs: 3 events in 2 page(s)
-2026-05-29 12:59:11,816 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-system-logs / failure: 3 lines [07:14 – 07:14]
-2026-05-29 12:59:13,750 [INFO] app.processor.log_processor — [CW] alike-prod-backend-system-logs: 156 events in 2 page(s)
-2026-05-29 12:59:13,752 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-system-logs / impact: 156 lines [07:14 – 07:24]
-2026-05-29 12:59:13,794 [INFO] app.processor.log_processor — [Top Error Signals]
+2026-06-01 05:06:43,813 [INFO] app.processor.process_incident — INCIDENT PROCESSOR v3 STARTED
+2026-06-01 05:06:43,815 [INFO] app.processor.process_incident — ============================================================
+2026-06-01 05:06:48,408 [INFO] app.processor.process_incident — [Load] incident=d0a06080-4a80-47ec-9c1b-ce7f58398613 | project='AIOps Test' tag=aiops-testing | region=us-east-1
+2026-06-01 05:06:53,839 [INFO] app.utils.aws_connector — [AWSClientFactory] Loaded credentials for project 'aiops-testing' region=us-east-1
+2026-06-01 05:06:53,842 [INFO] app.processor.process_incident — [Tools] Initialised for d0a06080-4a80-47ec-9c1b-ce7f58398613
+2026-06-01 05:06:53,845 [INFO] app.processor.process_incident — [Status] d0a06080-4a80-47ec-9c1b-ce7f58398613 → triage_started (10%)
+2026-06-01 05:06:59,845 [INFO] app.processor.dependency_resolver — [ALB resolver] Matched DNS 'aiops-alb-1937945577.us-east-1.elb.amazonaws.com' → ARN 'arn:aws:elasticloadbalancing:us-east-1:369606757523:loadbalancer/app/aiops-alb/55261edb7427e571'
+2026-06-01 05:07:00,355 [INFO] app.processor.dependency_resolver — [ALB resolver] Found target i-01cbe3e1e9e371033 state=healthy reason=None
+2026-06-01 05:07:00,357 [INFO] app.processor.dependency_resolver — [ALB resolver] Found target i-0d7409065a555843e state=healthy reason=None
+2026-06-01 05:07:00,360 [INFO] app.processor.dependency_resolver — [ALB resolver] Total targets for ALB: 2
+2026-06-01 05:07:00,367 [INFO] app.processor.dependency_resolver — [DependencyResolver] Resolved 1 dep(s) → 2 unique EC2 target(s): ['i-01cbe3e1e9e371033', 'i-0d7409065a555843e']
+2026-06-01 05:07:00,373 [INFO] app.processor.process_incident — [PreTriage] No short-circuit — full investigation
+2026-06-01 05:07:00,377 [INFO] app.processor.process_incident — [PreSignals] No primary root cause extracted pre-LLM
+2026-06-01 05:07:02,450 [INFO] app.processor.process_incident — [Status] d0a06080-4a80-47ec-9c1b-ce7f58398613 → infra_analysis (30%)
+2026-06-01 05:07:04,992 [INFO] app.agent.graph — [Agent] Starting investigation for incident d0a06080-4a80-47ec-9c1b-ce7f58398613
+2026-06-01 05:07:07,171 [INFO] app.utils.aws_connector — [BedrockClientFactory] Loaded Bedrock credentials region=ap-south-1
+2026-06-01 05:07:09,261 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
+2026-06-01 05:07:10,458 [INFO] app.agent.graph — [Agent] turn complete | tool_calls=1
+2026-06-01 05:07:10,464 [INFO] app.agent.graph — [ToolNode] get_ec2_analysis | args={"instance_ids": ["i-01cbe3e1e9e371033", "i-0d7409065a555843e"], "region": "us-east-1"}
+2026-06-01 05:07:10,472 [INFO] app.processor.process_incident — [Status] d0a06080-4a80-47ec-9c1b-ce7f58398613 → infra_analysis (30%)
+2026-06-01 05:07:22,709 [INFO] app.agent.graph — [ToolNode] get_ec2_analysis result: {"instances": {"i-01cbe3e1e9e371033": {"details": {"instance_id": "i-01cbe3e1e9e371033", "instance_type": "t3.micro", "state": "running", "private_ip": "172.31.22.201", "public_ip": "44.223.28.47", "availability_zone": "us-east-1c", "launch_time": "2026-06-01 04:44:53+00:00", "ami_id": "ami-091138d0f0d41ff90", "security_groups": [{"id": "sg-02dc2192e316318b4", "name": "launch-wizard-10"}], "tags": {"Created_by": "suresh", "Name": "aiops-test-1", "Project": "Aiops", "Created_for": "testing"}}, "status_checks": {"instance_status": "ok", "system_status": "ok"}, "metrics": {"cpu_percent": 0.7253749835103562, "network_in_bytes": 2795.0, "network_out_bytes": 2758.0, "disk_read_ops": null, "disk_write_ops": null, "status_check_failed": 0.0, "window_minutes": 15}}, "i-0d7409065a555843e": {"details": {"instance_id": "i-0d7409065a555843e", "instance_type": "t3.micro", "state": "running", "private_ip": "172.31.3.63", "public_ip": "44.204.212.38", "availability_zone": "us-east-1a", "launch_time": "2026-06-01 04:44:53+00:00", "ami_id": "ami-091138d0f0d41ff90", "security_groups": [{"id": "sg-04f1675ba6b3bff6e", "name": "launch-wizard-12"}], "tags": {"Created_by": "suresh", "Name": "aiops-test-2", "Created_for": "aiops-test", "Project": "meyiconnect-Aiops"}}, "status_checks": {"instance_status": "ok", "system_status": "ok"}, "metrics": {"cpu_percent": 0.879208628825656, "network_in_bytes": 15551.5, "network_out_bytes": 12429.5, "disk_read_ops": null, "disk_write_ops": null, "status_check_failed": 0.0, "window_minutes": 15}}}}...
+2026-06-01 05:07:22,716 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
+2026-06-01 05:07:26,947 [INFO] app.agent.graph — [Agent] turn complete | tool_calls=1
+2026-06-01 05:07:26,952 [INFO] app.agent.graph — [ToolNode] get_compressed_logs | args={"log_groups": ["aiops-app-test-logs", "aiops-system-test-logs"], "region": "us-east-1"}
+2026-06-01 05:07:26,957 [INFO] app.processor.process_incident — [Status] d0a06080-4a80-47ec-9c1b-ce7f58398613 → logs_analysis (60%)
+2026-06-01 05:07:29,622 [INFO] app.processor.log_processor — [Start] down_time=05:01:34 | window=-30min/+10min | groups=['aiops-app-test-logs', 'aiops-system-test-logs']
+2026-06-01 05:07:36,832 [INFO] app.processor.log_processor — [CW] aiops-system-test-logs: 6563 events in 3 page(s)
+2026-06-01 05:07:37,212 [INFO] app.processor.log_processor — [Phase-A] aiops-system-test-logs: 31/6563 error events [04:31 – 05:11]
+2026-06-01 05:07:50,431 [INFO] app.processor.log_processor — [CW] aiops-app-test-logs: 14623 events in 2 page(s)
+2026-06-01 05:07:50,852 [INFO] app.processor.log_processor — [Phase-A] aiops-app-test-logs: 92/14623 error events [04:31 – 05:11]
+2026-06-01 05:07:50,858 [INFO] app.processor.log_processor — [Phase-A] 123 total error events
+2026-06-01 05:07:50,863 [INFO] app.processor.log_processor — [Phase-B] Found sustained spike starting at 04:45:07 with 123 errors in 5m
+2026-06-01 05:07:50,867 [INFO] app.processor.log_processor — [Phase-B] First error: 04:45:07 in aiops-app-test-logs | true_start anchored → 04:40:07
+2026-06-01 05:07:50,869 [INFO] app.processor.log_processor — [Timeline Stages]
+  buildup: 04:40:07 → 04:45:07
+  failure: 04:45:07 → 05:01:34
+  impact: 05:01:34 → 05:11:34
+2026-06-01 05:07:51,737 [INFO] app.processor.log_processor — [CW] aiops-app-test-logs: 191 events in 2 page(s)
+2026-06-01 05:07:51,746 [INFO] app.processor.log_processor — [Phase-C] aiops-app-test-logs / buildup: 191 lines [04:40 – 04:45]
+2026-06-01 05:07:51,996 [INFO] app.processor.log_processor — [CW] aiops-system-test-logs: 0 events in 1 page(s)
+2026-06-01 05:07:51,998 [INFO] app.processor.log_processor — [Phase-C] aiops-system-test-logs / buildup: 0 lines [04:40 – 04:45]
+2026-06-01 05:07:53,029 [INFO] app.processor.log_processor — [CW] aiops-system-test-logs: 0 events in 1 page(s)
+2026-06-01 05:07:53,033 [INFO] app.processor.log_processor — [Phase-C] aiops-system-test-logs / impact: 0 lines [05:01 – 05:11]
+2026-06-01 05:07:53,984 [INFO] app.processor.log_processor — [CW] aiops-app-test-logs: 41 events in 2 page(s)
+2026-06-01 05:07:53,988 [INFO] app.processor.log_processor — [Phase-C] aiops-app-test-logs / impact: 41 lines [05:01 – 05:11]
+2026-06-01 05:08:00,747 [INFO] app.processor.log_processor — [CW] aiops-system-test-logs: 6563 events in 3 page(s)
+2026-06-01 05:08:00,754 [INFO] app.processor.log_processor — [Phase-C] aiops-system-test-logs / failure: 6563 lines [04:45 – 05:01]
+2026-06-01 05:08:12,229 [INFO] app.processor.log_processor — [CW] aiops-app-test-logs: 14623 events in 2 page(s)
+2026-06-01 05:08:12,239 [INFO] app.processor.log_processor — [Phase-C] aiops-app-test-logs / failure: 14623 lines [04:45 – 05:01]
+2026-06-01 05:08:12,581 [INFO] app.processor.log_processor — [Top Error Signals]
   • [RARE-HIGH-SIGNAL] [EXCEPTION] Traceback (most recent call last):
-  File "/home/ubuntu/aiops-testcase/app.py", line 149, in get_incidents
+  File "/home/ubuntu/aiops-testcase/app.py", line 145, in get_incidents
     with get_db() as conn:
          ~~~~~~^^
   File "/usr/lib/python3.14/contextlib.py", line 141, in __enter__
     return next(self.gen)
-  File "/home/ubuntu/aiops-testcase/app.py", line 48, i
-  • [x3] [EXCEPTION] Traceback (most recent call last):
-  File "/home/ubuntu/aiops-testcase/app.py", line 192, in get_incident_details
+  File "/home/ubuntu/aiops-testcase/app.py", line 44, i
+  • [RARE-HIGH-SIGNAL] [CASCADE-SYMPTOM of postgres, mysql, redis, rabbitmq, mongodb, elasticsearch] [EXCEPTION] Traceback (most recent call last):
+  File "/home/ubuntu/aiops-testcase/app.py", line 95, in health
+    conn = psycopg2.connect(
+        DB_URL,
+        connect_timeout=3
+    )
+  File "/home/ubuntu/aiops-testcase/venv/lib/python3.14/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn =
+  • [x4] [TIMEOUT] connection to server at "dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com" (18.205.164.157), port 5432 failed: Connection timed out
+	Is the server running on that host and accepting TCP/IP connections?
+  • [x2] [TIMEOUT] psycopg2.OperationalError: connection to server at "dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com" (35.174.144.149), port 5432 failed: Connection timed out
+	Is the server running on that host and accepting TCP/IP connections?
+  • [CASCADE-SYMPTOM of postgres, mysql, redis, rabbitmq, mongodb, elasticsearch] [x2] [TIMEOUT] connection to server at "dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com" (18.205.164.157), port 5432 failed: timeout expired
+  • [HTTP-500] 2026-05-30 09:57:27,599 INFO request_completed request_id=1379c231-ab58-46d4-9ebe-0ed9a73d1be0 status_code=500 duration_ms=403797
+  • [HTTP-500] 2026-05-30 13:21:08,500 INFO request_completed request_id=8d1e39ee-48d9-4618-9844-c2308551c93d status_code=200 duration_ms=1
+  • [HTTP-500] 2026-05-30 14:25:18,244 INFO request_completed request_id=5bc7982d-e90b-4824-bc3e-18bc6146264a status_code=500 duration_ms=9013
+  • [HTTP-500] 2026-05-30 14:25:29,500 INFO request_completed request_id=851a3054-74da-4826-b89a-f2d7b510b7fc status_code=404 duration_ms=0
+  • [HTTP-500] 2026-05-30 14:25:41,500 INFO request_started request_id=ffd768aa-ed15-44f2-8ff2-f3d6eac2b201 path=/adm/current/phpinfo.php
+2026-06-01 05:08:12,582 [INFO] app.processor.log_processor — [Done] groups=2 stages=3 total_raw=21418 top_errors=10
+2026-06-01 05:08:12,602 [INFO] app.agent.graph — [ToolNode] get_compressed_logs result: {"adaptive_window": {"before_minutes": 30, "after_minutes": 10}, "anchor": {"true_start": "2026-06-01T04:40:07.218000+00:00", "first_error_ts": "2026-06-01T04:45:07.218000+00:00", "first_error_msg": "2026-05-30 09:57:27,596 ERROR failed_to_fetch_incidents", "first_error_group": "aiops-app-test-logs", "first_error_weight": 15}, "top_errors": ["[RARE-HIGH-SIGNAL] [EXCEPTION] Traceback (most recent call last):\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 145, in get_incidents\n    with get_db() as conn:\n         ~~~~~~^^\n  File \"/usr/lib/python3.14/contextlib.py\", line 141, in __enter__\n    return next(self.gen)\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 44, i", "[RARE-HIGH-SIGNAL] [CASCADE-SYMPTOM of postgres, mysql, redis, rabbitmq, mongodb, elasticsearch] [EXCEPTION] Traceback (most recent call last):\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 95, in health\n    conn = psycopg2.connect(\n        DB_URL,\n        connect_timeout=3\n    )\n  File \"/home/ubuntu/aiops-testcase/venv/lib/python3.14/site-packages/psycopg2/__init__.py\", line 122, in connect\n    conn =", "[x4] [TIMEOUT] connection to server at \"dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com\" (18.205.164.157), port 5432 failed: Connection timed out\n\tIs the server running on that host and accepting TCP/IP connections?", "[x2] [TIMEOUT] psycopg2.OperationalError: connection to server at \"dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com\" (35.174.144.149), port 5432 failed: Connection timed out\n\tIs the server running on that host and accepting TCP/IP connections?", "[CASCADE-SYMPTOM of postgres, mysql, redis, rabbitmq, mongodb, elasticsearch] [x2] [TIMEOUT] connection to server at \"dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com\" (18.205.164.157), port 5432 failed: timeout expired", "[HTTP-500] 2026-05-30 09:57:27,599 INFO request_completed request_id=1379c231-ab58-46d4-9ebe-0ed9a73d1be0 status_code=500 duration_ms=403797", "[HTTP-500] 2026-05-30 13:21:08,500 INFO request_completed request_id=8d1e39ee-48d9-4618-9844-c2308551c93d status_code=200 duration_ms=1", "[HTTP-500] 2026-05-30 14:25:18,244 INFO request_completed request_id=5bc7982d-e90b-4824-bc3e-18bc6146264a status_code=500 duration_ms=9013"], "total_raw_lines": 21418, "group_summaries": {"aiops-app-test-logs": {"buildup": {"stage_label": "Pre-failure buildup", "window": "04:40 \u2013 04:45", "total_raw": 191, "error_count": 6, "warn_count": 0, "top_clusters": [{"level": "error", "count": 1, "weight_label": "exception", "is_rare": true, "cascade_suspect": false, "upstream_services": [], "sample": "Traceback (most recent call last):\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 145, in get_incidents\n    with get_db() as conn:\n         ~~~~~~^^\n  File \"/usr/lib/python3.14/contextlib.py\", line"}, {"level": "error", "count": 2, "weight_label": "timeout", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "connection to server at \"dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com\" (18.205.164.157), port 5432 failed: Connection timed out\n\tIs the server running on that host and accepting TCP/IP conn"}, {"level": "error", "count": 1, "weight_label": "http-500", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "2026-05-30 09:57:27,599 INFO request_completed request_id=1379c231-ab58-46d4-9ebe-0ed9a73d1be0 status_code=500 duration_ms=403797"}, {"level": "error", "count": 1, "weight_label": "timeout", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "psycopg2.OperationalError: connection to server at \"dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com\" (35.174.144.149), port 5432 failed: Connection timed out\n\tIs the server running on that hos"}, {"level": "error", "count": 1, "weight_label": "generic-error", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "2026-05-30 09:57:27,596 ERROR failed_to_fetch_incidents"}]}, "failure": {"stage_label": "Failure propagation", "window": "04:45 \u2013 05:01", "total_raw": 14623, "error_count": 92, "warn_count": 0, "top_clusters": [{"level": "error", "count": 1, "weight_label": "exception", "is_rare": true, "cascade_suspect": true, "upstream_services": ["postgres", "mysql", "redis", "rabbitmq", "mongodb", "elasticsearch"], "sample": "Traceback (most recent call last):\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 95, in health\n    conn = psycopg2.connect(\n        DB_URL,\n        connect_timeout=3\n    )\n  File \"/home/ubuntu/aio"}, {"level": "error", "count": 2, "weight_label": "exception", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "Traceback (most recent call last):\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 145, in get_incidents\n    with get_db() as conn:\n         ~~~~~~^^\n  File \"/usr/lib/python3.14/contextlib.py\", line"}, {"level": "error", "count": 4, "weight_label": "timeout", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "connection to server at \"dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com\" (18.205.164.157), port 5432 failed: Connection timed out\n\tIs the server running on that host and accepting TCP/IP conn"}, {"level": "error", "count": 2, "weight_label": "timeout", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "psycopg2.OperationalError: connection to server at \"dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com\" (35.174.144.149), port 5432 failed: Connection timed out\n\tIs the server running on that hos"}, {"level": "error", "count": 2, "weight_label": "timeout", "is_rare": false, "cascade_suspect": true, "upstream_services": ["postgres", "mysql", "redis", "rabbitmq", "mongodb", "elasticsearch"], "sample": "connection to server at \"dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com\" (18.205.164.157), port 5432 failed: timeout expired"}]}, "impact": {"stage_label": "Impact / recovery", "window": "05:01 \u2013 05:11", "total_raw": 41, "error_count": 0, "warn_count": 0, "top_clusters": []}}, "aiops-system-test-logs": {"buildup": {"stage_label": "Pre-failure buildup", "window": "04:40 \u2013 04:45", "total_raw": 0, "error_count": 0, "warn_count": 0, "top_clusters": []}, "failure": {"stage_label": "Failure propagation", "window": "04:45 \u2013 05:01", "total_raw": 6563, "error_count": 0, "warn_count": 0, "top_clusters": []}, "impact": {"stage_label": "Impact / recovery", "window": "05:01 \u2013 05:11", "total_raw": 0, "error_count": 0, "warn_count": 0, "top_clusters": []}}}}...
+2026-06-01 05:08:12,617 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
+2026-06-01 05:08:16,011 [INFO] app.agent.graph — [Agent] turn complete | tool_calls=1
+2026-06-01 05:08:16,016 [INFO] app.agent.graph — [StopCondition] Early stop — High-confidence primary RCA 'database_unreachable' (88%) confirmed by EC2 + logs.
+2026-06-01 05:08:16,019 [INFO] app.agent.graph — [Agent] ReAct loop done | incident=d0a06080-4a80-47ec-9c1b-ce7f58398613 | messages=7 | tool_calls=3
+2026-06-01 05:08:16,020 [INFO] app.agent.graph — [Extraction] Starting fresh extraction conversation
+2026-06-01 05:08:16,023 [INFO] app.agent.graph — [Extraction] Fresh message count=2
+2026-06-01 05:08:18,825 [INFO] app.utils.aws_connector — [BedrockClientFactory] Loaded Bedrock credentials region=ap-south-1
+2026-06-01 05:08:20,866 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
+2026-06-01 05:08:24,218 [INFO] app.agent.graph — [Extraction] Structured output success
+2026-06-01 05:08:24,225 [INFO] app.agent.graph — [Agent] Complete | incident=d0a06080-4a80-47ec-9c1b-ce7f58398613 | structured=yes
+2026-06-01 05:08:24,232 [INFO] app.processor.process_incident — [Agent] Finished | tool_calls=3 | messages=7 | structured=yes
+2026-06-01 05:08:24,235 [INFO] app.processor.process_incident — [Status] d0a06080-4a80-47ec-9c1b-ce7f58398613 → remediation_generated (90%)
+2026-06-01 05:08:29,662 [INFO] app.processor.process_incident — [SaveRCA] Updated 1 row(s) for d0a06080-4a80-47ec-9c1b-ce7f58398613
+2026-06-01 05:08:29,930 [INFO] app.processor.process_incident — ============================================================
+2026-06-01 05:08:29,937 [INFO] app.processor.process_incident — INCIDENT COMPLETED: d0a06080-4a80-47ec-9c1b-ce7f58398613
+2026-06-01 05:08:29,941 [INFO] app.processor.process_incident — ============================================================
+2026-06-01 05:08:29,945 [INFO] app.processor.worker — [Worker] Completed incident_id=d0a06080-4a80-47ec-9c1b-ce7f58398613
+2026-06-01 06:07:41,406 [INFO] app.main — Shutting down worker...
+2026-06-01 06:08:03,096 [INFO] app.main — Starting incident processor worker...
+2026-06-01 06:08:03,100 [INFO] app.processor.worker — [Worker] Incident processor worker started.
+2026-06-01 06:08:08,811 [INFO] app.queue.manager — [Queue] Enqueued incident_id=d0a06080-4a80-47ec-9c1b-ce7f58398613 | queue_size=1
+2026-06-01 06:08:08,816 [INFO] app.api.routes.queue — [/queue/enqueue] incident_id=d0a06080-4a80-47ec-9c1b-ce7f58398613 accepted
+2026-06-01 06:08:08,823 [INFO] app.processor.worker — [Worker] Picked up incident_id=d0a06080-4a80-47ec-9c1b-ce7f58398613
+
+
+
+
+
+
+
+
+
+
+
+
+
+2026-06-01 06:08:08,826 [INFO] app.processor.process_incident — ============================================================
+2026-06-01 06:08:08,829 [INFO] app.processor.process_incident — INCIDENT PROCESSOR v3 STARTED
+2026-06-01 06:08:08,831 [INFO] app.processor.process_incident — ============================================================
+2026-06-01 06:08:13,583 [INFO] app.processor.process_incident — [Load] incident=d0a06080-4a80-47ec-9c1b-ce7f58398613 | project='AIOps Test' tag=aiops-testing | region=us-east-1
+2026-06-01 06:08:15,992 [INFO] app.utils.aws_connector — [AWSClientFactory] Loaded credentials for project 'aiops-testing' region=us-east-1
+2026-06-01 06:08:16,001 [INFO] app.processor.process_incident — [Tools] Initialised for d0a06080-4a80-47ec-9c1b-ce7f58398613
+2026-06-01 06:08:16,009 [INFO] app.processor.process_incident — [Status] d0a06080-4a80-47ec-9c1b-ce7f58398613 → triage_started (10%)
+2026-06-01 06:08:22,332 [INFO] app.processor.dependency_resolver — [ALB resolver] Matched DNS 'aiops-alb-1937945577.us-east-1.elb.amazonaws.com' → ARN 'arn:aws:elasticloadbalancing:us-east-1:369606757523:loadbalancer/app/aiops-alb/55261edb7427e571'
+2026-06-01 06:08:22,924 [INFO] app.processor.dependency_resolver — [ALB resolver] Found target i-01cbe3e1e9e371033 state=healthy reason=None
+2026-06-01 06:08:22,931 [INFO] app.processor.dependency_resolver — [ALB resolver] Found target i-0d7409065a555843e state=healthy reason=None
+2026-06-01 06:08:22,938 [INFO] app.processor.dependency_resolver — [ALB resolver] Total targets for ALB: 2
+2026-06-01 06:08:22,950 [INFO] app.processor.dependency_resolver — [DependencyResolver] Resolved 1 dep(s) → 2 unique EC2 target(s): ['i-01cbe3e1e9e371033', 'i-0d7409065a555843e']
+2026-06-01 06:08:22,955 [INFO] app.processor.process_incident — [PreTriage] No short-circuit — full investigation
+2026-06-01 06:08:22,962 [INFO] app.processor.process_incident — [PreSignals] No primary root cause extracted pre-LLM
+2026-06-01 06:08:25,904 [INFO] app.processor.process_incident — [Status] d0a06080-4a80-47ec-9c1b-ce7f58398613 → infra_analysis (30%)
+2026-06-01 06:08:28,378 [INFO] app.agent.graph — [Agent] Starting investigation for incident d0a06080-4a80-47ec-9c1b-ce7f58398613
+2026-06-01 06:08:30,832 [INFO] app.utils.aws_connector — [BedrockClientFactory] Loaded Bedrock credentials region=ap-south-1
+2026-06-01 06:08:32,915 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
+2026-06-01 06:08:34,236 [INFO] app.agent.graph — [Agent] turn complete | tool_calls=1
+2026-06-01 06:08:34,239 [INFO] app.agent.graph — [ToolNode] get_ec2_analysis | args={"instance_ids": ["i-01cbe3e1e9e371033", "i-0d7409065a555843e"], "region": "us-east-1"}
+2026-06-01 06:08:34,241 [INFO] app.processor.process_incident — [Status] d0a06080-4a80-47ec-9c1b-ce7f58398613 → infra_analysis (30%)
+2026-06-01 06:08:44,764 [INFO] app.agent.graph — [ToolNode] get_ec2_analysis result: {"instances": {"i-01cbe3e1e9e371033": {"details": {"instance_id": "i-01cbe3e1e9e371033", "instance_type": "t3.micro", "state": "running", "private_ip": "172.31.22.201", "public_ip": "44.223.28.47", "availability_zone": "us-east-1c", "subnet_id": "subnet-0fc229524f637ed10", "vpc_id": "vpc-037a46b5ba2844dae", "launch_time": "2026-06-01 04:44:53+00:00", "ami_id": "ami-091138d0f0d41ff90", "security_groups": [{"id": "sg-02dc2192e316318b4", "name": "launch-wizard-10"}], "tags": {"Created_by": "suresh", "Name": "aiops-test-1", "Project": "Aiops", "Created_for": "testing"}}, "status_checks": {"instance_status": "ok", "system_status": "ok"}, "metrics": {"cpu_percent": 0.7058066525407233, "network_in_bytes": 2260.75, "network_out_bytes": 2631.25, "disk_read_ops": null, "disk_write_ops": null, "status_check_failed": 0.0, "window_minutes": 15}}, "i-0d7409065a555843e": {"details": {"instance_id": "i-0d7409065a555843e", "instance_type": "t3.micro", "state": "running", "private_ip": "172.31.3.63", "public_ip": "44.204.212.38", "availability_zone": "us-east-1a", "subnet_id": "subnet-06c67918dbc079ad3", "vpc_id": "vpc-037a46b5ba2844dae", "launch_time": "2026-06-01 04:44:53+00:00", "ami_id": "ami-091138d0f0d41ff90", "security_groups": [{"id": "sg-04f1675ba6b3bff6e", "name": "launch-wizard-12"}], "tags": {"Created_by": "suresh", "Name": "aiops-test-2", "Created_for": "aiops-test", "Project": "meyiconnect-Aiops"}}, "status_checks": {"instance_status": "ok", "system_status": "ok"}, "metrics": {"cpu_percent": 0.786096222283397, "network_in_bytes": 3173.25, "network_out_bytes": 3633.75, "disk_read_ops": null, "disk_write_ops": null, "status_check_failed": 0.0, "window_minutes": 15}}}}...
+2026-06-01 06:08:44,777 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
+2026-06-01 06:08:46,344 [INFO] app.agent.graph — [Agent] turn complete | tool_calls=1
+2026-06-01 06:08:46,351 [INFO] app.agent.graph — [ToolNode] get_compressed_logs | args={"log_groups": ["aiops-app-test-logs", "aiops-system-test-logs"], "region": "us-east-1"}
+2026-06-01 06:08:46,354 [INFO] app.processor.process_incident — [Status] d0a06080-4a80-47ec-9c1b-ce7f58398613 → logs_analysis (60%)
+2026-06-01 06:08:48,937 [INFO] app.processor.log_processor — [Start] down_time=05:01:34 | window=-30min/+10min | groups=['aiops-app-test-logs', 'aiops-system-test-logs']
+2026-06-01 06:09:10,283 [INFO] app.processor.log_processor — [CW] aiops-system-test-logs: 6563 events in 3 page(s)
+2026-06-01 06:09:10,449 [INFO] app.processor.log_processor — [Phase-A] aiops-system-test-logs: 31/6563 error events [04:31 – 05:11]
+2026-06-01 06:09:17,769 [INFO] app.processor.log_processor — [CW] aiops-app-test-logs: 14623 events in 2 page(s)
+2026-06-01 06:09:18,149 [INFO] app.processor.log_processor — [Phase-A] aiops-app-test-logs: 92/14623 error events [04:31 – 05:11]
+2026-06-01 06:09:18,154 [INFO] app.processor.log_processor — [Phase-A] 123 total error events
+2026-06-01 06:09:18,156 [INFO] app.processor.log_processor — [Phase-B] Found sustained spike starting at 04:45:07 with 123 errors in 5m
+2026-06-01 06:09:18,157 [INFO] app.processor.log_processor — [Phase-B] First error: 04:45:07 in aiops-app-test-logs | true_start anchored → 04:40:07
+2026-06-01 06:09:18,159 [INFO] app.processor.log_processor — [Timeline Stages]
+  buildup: 04:40:07 → 04:45:07
+  failure: 04:45:07 → 05:01:34
+  impact: 05:01:34 → 05:11:34
+2026-06-01 06:09:19,184 [INFO] app.processor.log_processor — [CW] aiops-system-test-logs: 0 events in 1 page(s)
+2026-06-01 06:09:19,187 [INFO] app.processor.log_processor — [Phase-C] aiops-system-test-logs / buildup: 0 lines [04:40 – 04:45]
+2026-06-01 06:09:19,262 [INFO] app.processor.log_processor — [CW] aiops-system-test-logs: 0 events in 1 page(s)
+2026-06-01 06:09:19,264 [INFO] app.processor.log_processor — [Phase-C] aiops-system-test-logs / impact: 0 lines [05:01 – 05:11]
+2026-06-01 06:09:19,770 [INFO] app.processor.log_processor — [CW] aiops-app-test-logs: 41 events in 3 page(s)
+2026-06-01 06:09:19,774 [INFO] app.processor.log_processor — [Phase-C] aiops-app-test-logs / impact: 41 lines [05:01 – 05:11]
+2026-06-01 06:09:21,964 [INFO] app.processor.log_processor — [CW] aiops-app-test-logs: 191 events in 2 page(s)
+2026-06-01 06:09:21,970 [INFO] app.processor.log_processor — [Phase-C] aiops-app-test-logs / buildup: 191 lines [04:40 – 04:45]
+2026-06-01 06:09:31,754 [INFO] app.processor.log_processor — [CW] aiops-system-test-logs: 6563 events in 3 page(s)
+2026-06-01 06:09:31,762 [INFO] app.processor.log_processor — [Phase-C] aiops-system-test-logs / failure: 6563 lines [04:45 – 05:01]
+2026-06-01 06:09:54,370 [INFO] app.processor.log_processor — [CW] aiops-app-test-logs: 14623 events in 2 page(s)
+2026-06-01 06:09:54,381 [INFO] app.processor.log_processor — [Phase-C] aiops-app-test-logs / failure: 14623 lines [04:45 – 05:01]
+2026-06-01 06:09:54,697 [INFO] app.processor.log_processor — [Top Error Signals]
+  • [RARE-HIGH-SIGNAL] [EXCEPTION] Traceback (most recent call last):
+  File "/home/ubuntu/aiops-testcase/app.py", line 145, in get_incidents
     with get_db() as conn:
          ~~~~~~^^
   File "/usr/lib/python3.14/contextlib.py", line 141, in __enter__
     return next(self.gen)
-  File "/home/ubuntu/aiops-testcase/app.py", lin
-  • [x6] [GENERIC-ERROR] psycopg2.ProgrammingError: invalid dsn: missing "=" after "pstgresql://meyiconnect_test_aiops_user:9UqSVbvQMMPK7ANn5SpYQagT6HifUJys@dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com/meyiconnect_test_aiops" in connection info string
-  • [HTTP-500] 2026-05-29 07:14:23,047 INFO request_completed request_id=b1a57b18-6ea7-48e5-bd55-dc340b80832b status_code=500 duration_ms=1
-  • [HTTP-500] 2026-05-29 07:14:29,280 INFO request_completed request_id=64f32086-f8e5-4736-8a62-60c4458db871 status_code=500 duration_ms=1
-  • [HTTP-500] 2026-05-29 07:14:31,875 INFO request_completed request_id=17f04add-b5fa-42c6-a35e-fe9095e29010 status_code=500 duration_ms=1
-  • [HTTP-500] 2026-05-29 07:14:35,902 INFO request_completed request_id=5661c592-5745-45d5-a796-2af31b9eabb6 status_code=500 duration_ms=1
-  • [HTTP-500] 2026-05-29 07:14:47,429 INFO request_completed request_id=42bf7e6a-6f13-4591-a69b-7aad701630f0 status_code=500 duration_ms=3
-  • [HTTP-500] 2026-05-29 07:14:52,517 INFO request_completed request_id=88fb15ea-a932-4773-9f0a-64777ae01e22 status_code=500 duration_ms=1
-  • [HTTP-500] 2026-05-29 07:17:38,915 INFO request_completed request_id=2d6eae30-693c-473a-8a94-fee6b241bd19 status_code=500 duration_ms=2
-2026-05-29 12:59:13,796 [INFO] app.processor.log_processor — [Done] groups=3 stages=3 total_raw=543 top_errors=10
-2026-05-29 12:59:13,803 [INFO] app.agent.graph — [ToolNode] get_compressed_logs result: {"adaptive_window": {"before_minutes": 30, "after_minutes": 10}, "anchor": {"true_start": "2026-05-29T07:09:23.263000+00:00", "first_error_ts": "2026-05-29T07:14:23.263000+00:00", "first_error_msg": "2026-05-29 07:14:23,046 ERROR failed_to_fetch_incidents", "first_error_group": "alike-prod-backend-app-logs", "first_error_weight": 15}, "top_errors": ["[RARE-HIGH-SIGNAL] [EXCEPTION] Traceback (most recent call last):\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 149, in get_incidents\n    with get_db() as conn:\n         ~~~~~~^^\n  File \"/usr/lib/python3.14/contextlib.py\", line 141, in __enter__\n    return next(self.gen)\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 48, i", "[x3] [EXCEPTION] Traceback (most recent call last):\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 192, in get_incident_details\n    with get_db() as conn:\n         ~~~~~~^^\n  File \"/usr/lib/python3.14/contextlib.py\", line 141, in __enter__\n    return next(self.gen)\n  File \"/home/ubuntu/aiops-testcase/app.py\", lin", "[x6] [GENERIC-ERROR] psycopg2.ProgrammingError: invalid dsn: missing \"=\" after \"pstgresql://meyiconnect_test_aiops_user:9UqSVbvQMMPK7ANn5SpYQagT6HifUJys@dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com/meyiconnect_test_aiops\" in connection info string", "[HTTP-500] 2026-05-29 07:14:23,047 INFO request_completed request_id=b1a57b18-6ea7-48e5-bd55-dc340b80832b status_code=500 duration_ms=1", "[HTTP-500] 2026-05-29 07:14:29,280 INFO request_completed request_id=64f32086-f8e5-4736-8a62-60c4458db871 status_code=500 duration_ms=1", "[HTTP-500] 2026-05-29 07:14:31,875 INFO request_completed request_id=17f04add-b5fa-42c6-a35e-fe9095e29010 status_code=500 duration_ms=1", "[HTTP-500] 2026-05-29 07:14:35,902 INFO request_completed request_id=5661c592-5745-45d5-a796-2af31b9eabb6 status_code=500 duration_ms=1", "[HTTP-500] 2026-05-29 07:14:47,429 INFO request_completed request_id=42bf7e6a-6f13-4591-a69b-7aad701630f0 status_code=500 duration_ms=3"], "total_raw_lines": 543, "group_summaries": {"alike-prod-backend-app-logs": {"buildup": {"stage_label": "Pre-failure buildup", "window": "07:09 \u2013 07:14", "total_raw": 52, "error_count": 3, "warn_count": 0, "top_clusters": [{"level": "error", "count": 1, "weight_label": "exception", "is_rare": true, "cascade_suspect": false, "upstream_services": [], "sample": "Traceback (most recent call last):\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 149, in get_incidents\n    with get_db() as conn:\n         ~~~~~~^^\n  File \"/usr/lib/python3.14/contextlib.py\", line"}, {"level": "error", "count": 1, "weight_label": "generic-error", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "2026-05-29 07:14:23,046 ERROR failed_to_fetch_incidents"}, {"level": "error", "count": 1, "weight_label": "generic-error", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "psycopg2.ProgrammingError: invalid dsn: missing \"=\" after \"pstgresql://meyiconnect_test_aiops_user:9UqSVbvQMMPK7ANn5SpYQagT6HifUJys@dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com/meyiconnect_"}]}, "failure": {"stage_label": "Failure propagation", "window": "07:14 \u2013 07:14", "total_raw": 13, "error_count": 7, "warn_count": 0, "top_clusters": [{"level": "error", "count": 2, "weight_label": "exception", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "Traceback (most recent call last):\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 149, in get_incidents\n    with get_db() as conn:\n         ~~~~~~^^\n  File \"/usr/lib/python3.14/contextlib.py\", line"}, {"level": "error", "count": 1, "weight_label": "http-500", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "2026-05-29 07:14:23,047 INFO request_completed request_id=b1a57b18-6ea7-48e5-bd55-dc340b80832b status_code=500 duration_ms=1"}, {"level": "error", "count": 2, "weight_label": "generic-error", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "2026-05-29 07:14:23,046 ERROR failed_to_fetch_incidents"}, {"level": "error", "count": 2, "weight_label": "generic-error", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "psycopg2.ProgrammingError: invalid dsn: missing \"=\" after \"pstgresql://meyiconnect_test_aiops_user:9UqSVbvQMMPK7ANn5SpYQagT6HifUJys@dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com/meyiconnect_"}]}, "impact": {"stage_label": "Impact / recovery", "window": "07:14 \u2013 07:24", "total_raw": 289, "error_count": 24, "warn_count": 0, "top_clusters": [{"level": "error", "count": 3, "weight_label": "exception", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "Traceback (most recent call last):\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 149, in get_incidents\n    with get_db() as conn:\n         ~~~~~~^^\n  File \"/usr/lib/python3.14/contextlib.py\", line"}, {"level": "error", "count": 3, "weight_label": "exception", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "Traceback (most recent call last):\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 192, in get_incident_details\n    with get_db() as conn:\n         ~~~~~~^^\n  File \"/usr/lib/python3.14/contextlib.py"}, {"level": "error", "count": 6, "weight_label": "generic-error", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "psycopg2.ProgrammingError: invalid dsn: missing \"=\" after \"pstgresql://meyiconnect_test_aiops_user:9UqSVbvQMMPK7ANn5SpYQagT6HifUJys@dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com/meyiconnect_"}, {"level": "error", "count": 1, "weight_label": "http-500", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "2026-05-29 07:14:29,280 INFO request_completed request_id=64f32086-f8e5-4736-8a62-60c4458db871 status_code=500 duration_ms=1"}, {"level": "error", "count": 1, "weight_label": "http-500", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "2026-05-29 07:14:31,875 INFO request_completed request_id=17f04add-b5fa-42c6-a35e-fe9095e29010 status_code=500 duration_ms=1"}]}}, "alike-prod-backend-logs": {"buildup": {"stage_label": "Pre-failure buildup", "window": "07:09 \u2013 07:14", "total_raw": 0, "error_count": 0, "warn_count": 0, "top_clusters": []}, "failure": {"stage_label": "Failure propagation", "window": "07:14 \u2013 07:14", "total_raw": 0, "error_count": 0, "warn_count": 0, "top_clusters": []}, "impact": {"stage_label": "Impact / recovery", "window": "07:14 \u2013 07:24", "total_raw": 0, "error_count": 0, "warn_count": 0, "top_clusters": []}}, "alike-prod-backend-system-logs": {"buildup": {"stage_label": "Pre-failure buildup", "window": "07:09 \u2013 07:14", "total_raw": 30, "error_count": 0, "warn_count": 0, "top_clusters": []}, "failure": {"stage_label": "Failure propagation", "window": "07:14 \u2013 07:14", "total_raw": 3, "error_count": 0, "warn_count": 0, "top_clusters": []}, "impact": {"stage_label": "Impact / recovery", "window": "07:14 \u2013 07:24", "total_raw": 156, "error_count": 0, "warn_count": 0, "top_clusters": []}}}}
-2026-05-29 12:59:13,810 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
-2026-05-29 12:59:22,111 [INFO] app.agent.graph — [Agent] turn complete | tool_calls=1
-2026-05-29 12:59:22,118 [INFO] app.agent.graph — [StopCondition] Early stop — High-confidence primary RCA 'database_config_error' (93%) confirmed by EC2 + logs.
-2026-05-29 12:59:22,122 [WARNING] app.agent.graph — [Agent] No JSON from LLM — falling back to deterministic signals
-2026-05-29 12:59:22,123 [INFO] app.agent.graph — [Agent] Complete | incident=6554e9eb-2206-487a-a7c6-c4229356f496 | messages=9 | tool_calls=4 | structured=yes
-2026-05-29 12:59:22,130 [INFO] app.processor.process_incident — [Agent] Finished | tool_calls=4 | messages=9 | early_exit=False | structured=yes
-2026-05-29 12:59:22,134 [INFO] app.processor.process_incident — [Status] 6554e9eb-2206-487a-a7c6-c4229356f496 → remediation_generated (90%)
-2026-05-29 12:59:26,737 [INFO] app.processor.process_incident — [SaveRCA] Updated 1 row(s) for 6554e9eb-2206-487a-a7c6-c4229356f496
-2026-05-29 12:59:26,994 [INFO] app.processor.process_incident — ============================================================
-2026-05-29 12:59:26,995 [INFO] app.processor.process_incident — INCIDENT COMPLETED: 6554e9eb-2206-487a-a7c6-c4229356f496
-2026-05-29 12:59:26,996 [INFO] app.processor.process_incident — ============================================================
-2026-05-29 12:59:26,999 [INFO] app.processor.worker — [Worker] Completed incident_id=6554e9eb-2206-487a-a7c6-c4229356f496
-2026-05-29 13:02:06,771 [INFO] app.main — Shutting down worker...
-2026-05-29 13:02:24,879 [INFO] app.main — Starting incident processor worker...
-2026-05-29 13:02:24,880 [INFO] app.processor.worker — [Worker] Incident processor worker started.
-2026-05-29 13:02:28,976 [INFO] app.queue.manager — [Queue] Enqueued incident_id=6554e9eb-2206-487a-a7c6-c4229356f496 | queue_size=1
-2026-05-29 13:02:28,977 [INFO] app.api.routes.queue — [/queue/enqueue] incident_id=6554e9eb-2206-487a-a7c6-c4229356f496 accepted
-2026-05-29 13:02:28,978 [INFO] app.processor.worker — [Worker] Picked up incident_id=6554e9eb-2206-487a-a7c6-c4229356f496
-2026-05-29 13:02:28,980 [INFO] app.processor.process_incident — 
+  File "/home/ubuntu/aiops-testcase/app.py", line 44, i
+  • [RARE-HIGH-SIGNAL] [CASCADE-SYMPTOM of postgres, mysql, redis, rabbitmq, mongodb, elasticsearch] [EXCEPTION] Traceback (most recent call last):
+  File "/home/ubuntu/aiops-testcase/app.py", line 95, in health
+    conn = psycopg2.connect(
+        DB_URL,
+        connect_timeout=3
+    )
+  File "/home/ubuntu/aiops-testcase/venv/lib/python3.14/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn =
+  • [x4] [TIMEOUT] connection to server at "dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com" (18.205.164.157), port 5432 failed: Connection timed out
+	Is the server running on that host and accepting TCP/IP connections?
+  • [x2] [TIMEOUT] psycopg2.OperationalError: connection to server at "dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com" (35.174.144.149), port 5432 failed: Connection timed out
+	Is the server running on that host and accepting TCP/IP connections?
+  • [CASCADE-SYMPTOM of postgres, mysql, redis, rabbitmq, mongodb, elasticsearch] [x2] [TIMEOUT] connection to server at "dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com" (18.205.164.157), port 5432 failed: timeout expired
+  • [HTTP-500] 2026-05-30 09:57:27,599 INFO request_completed request_id=1379c231-ab58-46d4-9ebe-0ed9a73d1be0 status_code=500 duration_ms=403797
+  • [HTTP-500] 2026-05-30 13:21:08,500 INFO request_completed request_id=8d1e39ee-48d9-4618-9844-c2308551c93d status_code=200 duration_ms=1
+  • [HTTP-500] 2026-05-30 14:25:18,244 INFO request_completed request_id=5bc7982d-e90b-4824-bc3e-18bc6146264a status_code=500 duration_ms=9013
+  • [HTTP-500] 2026-05-30 14:25:29,500 INFO request_completed request_id=851a3054-74da-4826-b89a-f2d7b510b7fc status_code=404 duration_ms=0
+  • [HTTP-500] 2026-05-30 14:25:41,500 INFO request_started request_id=ffd768aa-ed15-44f2-8ff2-f3d6eac2b201 path=/adm/current/phpinfo.php
+2026-06-01 06:09:54,702 [INFO] app.processor.log_processor — [Done] groups=2 stages=3 total_raw=21418 top_errors=10
+2026-06-01 06:09:54,710 [INFO] app.agent.graph — [ToolNode] get_compressed_logs result: {"adaptive_window": {"before_minutes": 30, "after_minutes": 10}, "anchor": {"true_start": "2026-06-01T04:40:07.218000+00:00", "first_error_ts": "2026-06-01T04:45:07.218000+00:00", "first_error_msg": "2026-05-30 09:57:27,596 ERROR failed_to_fetch_incidents", "first_error_group": "aiops-app-test-logs", "first_error_weight": 15}, "top_errors": ["[RARE-HIGH-SIGNAL] [EXCEPTION] Traceback (most recent call last):\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 145, in get_incidents\n    with get_db() as conn:\n         ~~~~~~^^\n  File \"/usr/lib/python3.14/contextlib.py\", line 141, in __enter__\n    return next(self.gen)\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 44, i", "[RARE-HIGH-SIGNAL] [CASCADE-SYMPTOM of postgres, mysql, redis, rabbitmq, mongodb, elasticsearch] [EXCEPTION] Traceback (most recent call last):\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 95, in health\n    conn = psycopg2.connect(\n        DB_URL,\n        connect_timeout=3\n    )\n  File \"/home/ubuntu/aiops-testcase/venv/lib/python3.14/site-packages/psycopg2/__init__.py\", line 122, in connect\n    conn =", "[x4] [TIMEOUT] connection to server at \"dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com\" (18.205.164.157), port 5432 failed: Connection timed out\n\tIs the server running on that host and accepting TCP/IP connections?", "[x2] [TIMEOUT] psycopg2.OperationalError: connection to server at \"dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com\" (35.174.144.149), port 5432 failed: Connection timed out\n\tIs the server running on that host and accepting TCP/IP connections?", "[CASCADE-SYMPTOM of postgres, mysql, redis, rabbitmq, mongodb, elasticsearch] [x2] [TIMEOUT] connection to server at \"dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com\" (18.205.164.157), port 5432 failed: timeout expired", "[HTTP-500] 2026-05-30 09:57:27,599 INFO request_completed request_id=1379c231-ab58-46d4-9ebe-0ed9a73d1be0 status_code=500 duration_ms=403797", "[HTTP-500] 2026-05-30 13:21:08,500 INFO request_completed request_id=8d1e39ee-48d9-4618-9844-c2308551c93d status_code=200 duration_ms=1", "[HTTP-500] 2026-05-30 14:25:18,244 INFO request_completed request_id=5bc7982d-e90b-4824-bc3e-18bc6146264a status_code=500 duration_ms=9013"], "total_raw_lines": 21418, "group_summaries": {"aiops-app-test-logs": {"buildup": {"stage_label": "Pre-failure buildup", "window": "04:40 \u2013 04:45", "total_raw": 191, "error_count": 6, "warn_count": 0, "top_clusters": [{"level": "error", "count": 1, "weight_label": "exception", "is_rare": true, "cascade_suspect": false, "upstream_services": [], "sample": "Traceback (most recent call last):\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 145, in get_incidents\n    with get_db() as conn:\n         ~~~~~~^^\n  File \"/usr/lib/python3.14/contextlib.py\", line"}, {"level": "error", "count": 2, "weight_label": "timeout", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "connection to server at \"dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com\" (18.205.164.157), port 5432 failed: Connection timed out\n\tIs the server running on that host and accepting TCP/IP conn"}, {"level": "error", "count": 1, "weight_label": "http-500", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "2026-05-30 09:57:27,599 INFO request_completed request_id=1379c231-ab58-46d4-9ebe-0ed9a73d1be0 status_code=500 duration_ms=403797"}, {"level": "error", "count": 1, "weight_label": "timeout", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "psycopg2.OperationalError: connection to server at \"dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com\" (35.174.144.149), port 5432 failed: Connection timed out\n\tIs the server running on that hos"}, {"level": "error", "count": 1, "weight_label": "generic-error", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "2026-05-30 09:57:27,596 ERROR failed_to_fetch_incidents"}]}, "failure": {"stage_label": "Failure propagation", "window": "04:45 \u2013 05:01", "total_raw": 14623, "error_count": 92, "warn_count": 0, "top_clusters": [{"level": "error", "count": 1, "weight_label": "exception", "is_rare": true, "cascade_suspect": true, "upstream_services": ["postgres", "mysql", "redis", "rabbitmq", "mongodb", "elasticsearch"], "sample": "Traceback (most recent call last):\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 95, in health\n    conn = psycopg2.connect(\n        DB_URL,\n        connect_timeout=3\n    )\n  File \"/home/ubuntu/aio"}, {"level": "error", "count": 2, "weight_label": "exception", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "Traceback (most recent call last):\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 145, in get_incidents\n    with get_db() as conn:\n         ~~~~~~^^\n  File \"/usr/lib/python3.14/contextlib.py\", line"}, {"level": "error", "count": 4, "weight_label": "timeout", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "connection to server at \"dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com\" (18.205.164.157), port 5432 failed: Connection timed out\n\tIs the server running on that host and accepting TCP/IP conn"}, {"level": "error", "count": 2, "weight_label": "timeout", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "psycopg2.OperationalError: connection to server at \"dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com\" (35.174.144.149), port 5432 failed: Connection timed out\n\tIs the server running on that hos"}, {"level": "error", "count": 2, "weight_label": "timeout", "is_rare": false, "cascade_suspect": true, "upstream_services": ["postgres", "mysql", "redis", "rabbitmq", "mongodb", "elasticsearch"], "sample": "connection to server at \"dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com\" (18.205.164.157), port 5432 failed: timeout expired"}]}, "impact": {"stage_label": "Impact / recovery", "window": "05:01 \u2013 05:11", "total_raw": 41, "error_count": 0, "warn_count": 0, "top_clusters": []}}, "aiops-system-test-logs": {"buildup": {"stage_label": "Pre-failure buildup", "window": "04:40 \u2013 04:45", "total_raw": 0, "error_count": 0, "warn_count": 0, "top_clusters": []}, "failure": {"stage_label": "Failure propagation", "window": "04:45 \u2013 05:01", "total_raw": 6563, "error_count": 0, "warn_count": 0, "top_clusters": []}, "impact": {"stage_label": "Impact / recovery", "window": "05:01 \u2013 05:11", "total_raw": 0, "error_count": 0, "warn_count": 0, "top_clusters": []}}}}...
+2026-06-01 06:09:54,723 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
+2026-06-01 06:09:57,206 [INFO] app.agent.graph — [Agent] turn complete | tool_calls=1
+2026-06-01 06:09:57,213 [INFO] app.agent.graph — [StopCondition] Early stop — High-confidence primary RCA 'database_unreachable' (88%) confirmed by EC2 + logs.
+2026-06-01 06:09:57,224 [INFO] app.agent.graph — [Agent] ReAct loop done | incident=d0a06080-4a80-47ec-9c1b-ce7f58398613 | messages=7 | tool_calls=3
+2026-06-01 06:09:57,234 [INFO] app.agent.graph — [Extraction] Starting fresh extraction conversation
+2026-06-01 06:09:57,241 [INFO] app.agent.graph — [Extraction] Fresh message count=2
+2026-06-01 06:10:00,011 [INFO] app.utils.aws_connector — [BedrockClientFactory] Loaded Bedrock credentials region=ap-south-1
+2026-06-01 06:10:02,074 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
+2026-06-01 06:10:06,799 [INFO] app.agent.graph — [Extraction] Structured output success
+2026-06-01 06:10:06,811 [INFO] app.agent.graph — [Agent] Complete | incident=d0a06080-4a80-47ec-9c1b-ce7f58398613 | structured=yes
+2026-06-01 06:10:06,823 [INFO] app.processor.process_incident — [Agent] Finished | tool_calls=3 | messages=7 | structured=yes
+2026-06-01 06:10:06,829 [INFO] app.processor.process_incident — [Status] d0a06080-4a80-47ec-9c1b-ce7f58398613 → remediation_generated (90%)
+2026-06-01 06:10:11,487 [INFO] app.processor.process_incident — [SaveRCA] Updated 1 row(s) for d0a06080-4a80-47ec-9c1b-ce7f58398613
+2026-06-01 06:10:11,747 [INFO] app.processor.process_incident — ============================================================
+2026-06-01 06:10:11,751 [INFO] app.processor.process_incident — INCIDENT COMPLETED: d0a06080-4a80-47ec-9c1b-ce7f58398613
+2026-06-01 06:10:11,753 [INFO] app.processor.process_incident — ============================================================
+2026-06-01 06:10:11,757 [INFO] app.processor.worker — [Worker] Completed incident_id=d0a06080-4a80-47ec-9c1b-ce7f58398613
+2026-06-01 07:04:04,803 [INFO] app.main — Shutting down worker...
+2026-06-01 07:04:25,498 [INFO] app.main — Starting incident processor worker...
+2026-06-01 07:04:25,502 [INFO] app.processor.worker — [Worker] Incident processor worker started.
+2026-06-01 07:04:38,037 [INFO] app.queue.manager — [Queue] Enqueued incident_id=d0a06080-4a80-47ec-9c1b-ce7f58398613 | queue_size=1
+2026-06-01 07:04:38,039 [INFO] app.api.routes.queue — [/queue/enqueue] incident_id=d0a06080-4a80-47ec-9c1b-ce7f58398613 accepted
+2026-06-01 07:04:38,047 [INFO] app.processor.worker — [Worker] Picked up incident_id=d0a06080-4a80-47ec-9c1b-ce7f58398613
+2026-06-01 07:04:38,052 [INFO] app.processor.process_incident — 
+
+
+
+
+
+
+
 
 
 
 
 
 ============================================================
-2026-05-29 13:02:28,981 [INFO] app.processor.process_incident — INCIDENT PROCESSOR v3 STARTED
-2026-05-29 13:02:28,981 [INFO] app.processor.process_incident — ============================================================
-2026-05-29 13:02:37,105 [INFO] app.processor.process_incident — [Load] incident=6554e9eb-2206-487a-a7c6-c4229356f496 | project='AIOps Production' tag=aiops-prod | region=us-east-1
-2026-05-29 13:02:39,269 [INFO] app.utils.aws_connector — [AWSClientFactory] Loaded credentials for project 'aiops-prod' region=us-east-1
-2026-05-29 13:02:39,270 [INFO] app.processor.process_incident — [Tools] Initialised for 6554e9eb-2206-487a-a7c6-c4229356f496
-2026-05-29 13:02:39,270 [INFO] app.processor.process_incident — [Status] 6554e9eb-2206-487a-a7c6-c4229356f496 → triage_started (10%)
-2026-05-29 13:02:43,447 [INFO] app.processor.dependency_resolver — [ALB resolver] Matched DNS 'aiops-alb-1937945577.us-east-1.elb.amazonaws.com' → ARN 'arn:aws:elasticloadbalancing:us-east-1:369606757523:loadbalancer/app/aiops-alb/55261edb7427e571'
-2026-05-29 13:02:43,987 [INFO] app.processor.dependency_resolver — [ALB resolver] Found target i-01cbe3e1e9e371033 state=healthy reason=None
-2026-05-29 13:02:43,988 [INFO] app.processor.dependency_resolver — [ALB resolver] Found target i-0d7409065a555843e state=healthy reason=None
-2026-05-29 13:02:43,988 [INFO] app.processor.dependency_resolver — [ALB resolver] Total targets for ALB: 2
-2026-05-29 13:02:43,989 [INFO] app.processor.dependency_resolver — [DependencyResolver] Resolved 1 dep(s) → 2 unique EC2 target(s): ['i-01cbe3e1e9e371033', 'i-0d7409065a555843e']
-2026-05-29 13:02:43,990 [INFO] app.processor.process_incident — [PreTriage] No short-circuit — full investigation
-2026-05-29 13:02:43,990 [INFO] app.processor.process_incident — [PreSignals] No primary root cause extracted pre-LLM
-2026-05-29 13:02:46,057 [INFO] app.processor.process_incident — [Status] 6554e9eb-2206-487a-a7c6-c4229356f496 → infra_analysis (30%)
-2026-05-29 13:02:48,473 [INFO] app.agent.graph — [Agent] Starting investigation for incident 6554e9eb-2206-487a-a7c6-c4229356f496
-2026-05-29 13:02:50,491 [INFO] app.utils.aws_connector — [BedrockClientFactory] Loaded Bedrock credentials region=ap-south-1
-2026-05-29 13:02:50,577 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
-2026-05-29 13:02:51,870 [INFO] app.agent.graph — [Agent] turn complete | tool_calls=1
-2026-05-29 13:02:51,871 [INFO] app.agent.graph — [ToolNode] resolve_incident_targets | args={"dependencies": [{"type": "alb", "region": "us-east-1", "resource_id": "aiops-alb-1937945577.us-east-1.elb.amazonaws.com", "log_group_name": ["alike-prod-backend-app-logs", "alike-prod-backend-logs", "alike-prod-backend-system-logs"]}]}
-2026-05-29 13:02:53,196 [INFO] app.processor.dependency_resolver — [ALB resolver] Matched DNS 'aiops-alb-1937945577.us-east-1.elb.amazonaws.com' → ARN 'arn:aws:elasticloadbalancing:us-east-1:369606757523:loadbalancer/app/aiops-alb/55261edb7427e571'
-2026-05-29 13:02:53,761 [INFO] app.processor.dependency_resolver — [ALB resolver] Found target i-01cbe3e1e9e371033 state=healthy reason=None
-2026-05-29 13:02:53,763 [INFO] app.processor.dependency_resolver — [ALB resolver] Found target i-0d7409065a555843e state=healthy reason=None
-2026-05-29 13:02:53,766 [INFO] app.processor.dependency_resolver — [ALB resolver] Total targets for ALB: 2
-2026-05-29 13:02:53,767 [INFO] app.processor.dependency_resolver — [DependencyResolver] Resolved 1 dep(s) → 2 unique EC2 target(s): ['i-01cbe3e1e9e371033', 'i-0d7409065a555843e']
-2026-05-29 13:02:53,769 [INFO] app.agent.graph — [ToolNode] resolve_incident_targets result: {"targets": [{"instance_id": "i-01cbe3e1e9e371033", "region": "us-east-1", "log_groups": ["alike-prod-backend-app-logs", "alike-prod-backend-logs", "alike-prod-backend-system-logs"], "target_health": "healthy", "target_reason": ""}, {"instance_id": "i-0d7409065a555843e", "region": "us-east-1", "log_groups": ["alike-prod-backend-app-logs", "alike-prod-backend-logs", "alike-prod-backend-system-logs"], "target_health": "healthy", "target_reason": ""}], "alb_meta": {"alb_dns": "aiops-alb-1937945577.
-2026-05-29 13:02:53,771 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
-2026-05-29 13:02:55,304 [INFO] app.agent.graph — [Agent] turn complete | tool_calls=1
-2026-05-29 13:02:55,305 [INFO] app.agent.graph — [ToolNode] get_ec2_analysis | args={"instance_ids": ["i-01cbe3e1e9e371033", "i-0d7409065a555843e"], "region": "us-east-1"}
-2026-05-29 13:02:55,305 [INFO] app.processor.process_incident — [Status] 6554e9eb-2206-487a-a7c6-c4229356f496 → infra_analysis (30%)
-2026-05-29 13:03:03,677 [INFO] app.agent.graph — [ToolNode] get_ec2_analysis result: {"instances": {"i-01cbe3e1e9e371033": {"details": {"instance_id": "i-01cbe3e1e9e371033", "instance_type": "t3.micro", "state": "running", "private_ip": "172.31.22.201", "public_ip": "54.196.160.33", "availability_zone": "us-east-1c", "launch_time": "2026-05-29 06:00:43+00:00", "ami_id": "ami-091138d0f0d41ff90", "security_groups": [{"id": "sg-02dc2192e316318b4", "name": "launch-wizard-10"}], "tags": {"Created_by": "suresh", "Project": "Aiops", "Name": "Alike-prod-backend", "Created_for": "testing
-2026-05-29 13:03:03,686 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
-2026-05-29 13:03:05,550 [INFO] app.agent.graph — [Agent] turn complete | tool_calls=1
-2026-05-29 13:03:05,552 [INFO] app.agent.graph — [ToolNode] get_compressed_logs | args={"log_groups": ["alike-prod-backend-app-logs", "alike-prod-backend-logs", "alike-prod-backend-system-logs"], "region": "us-east-1"}
-2026-05-29 13:03:05,555 [INFO] app.processor.process_incident — [Status] 6554e9eb-2206-487a-a7c6-c4229356f496 → logs_analysis (60%)
-2026-05-29 13:03:08,099 [INFO] app.processor.log_processor — [Start] down_time=07:14:29 | window=-30min/+10min | groups=['alike-prod-backend-app-logs', 'alike-prod-backend-logs', 'alike-prod-backend-system-logs']
-2026-05-29 13:03:09,158 [INFO] app.processor.log_processor — [CW] alike-prod-backend-logs: 0 events in 1 page(s)
-2026-05-29 13:03:09,159 [INFO] app.processor.log_processor — [Phase-A] alike-prod-backend-logs: 0/0 error events [06:44 – 07:24]
-2026-05-29 13:03:14,303 [INFO] app.processor.log_processor — [CW] alike-prod-backend-system-logs: 335 events in 2 page(s)
-2026-05-29 13:03:14,313 [INFO] app.processor.log_processor — [Phase-A] alike-prod-backend-system-logs: 6/335 error events [06:44 – 07:24]
-2026-05-29 13:03:16,065 [INFO] app.processor.log_processor — [CW] alike-prod-backend-app-logs: 599 events in 2 page(s)
-2026-05-29 13:03:16,114 [INFO] app.processor.log_processor — [Phase-A] alike-prod-backend-app-logs: 28/599 error events [06:44 – 07:24]
-2026-05-29 13:03:16,116 [INFO] app.processor.log_processor — [Phase-A] 34 total error events
-2026-05-29 13:03:16,117 [INFO] app.processor.log_processor — [Phase-B] Found sustained spike starting at 07:14:23 with 33 errors in 5m
-2026-05-29 13:03:16,117 [INFO] app.processor.log_processor — [Phase-B] First error: 07:14:23 in alike-prod-backend-app-logs | true_start anchored → 07:09:23
-2026-05-29 13:03:16,118 [INFO] app.processor.log_processor — [Timeline Stages]
-  buildup: 07:09:23 → 07:14:23
-  failure: 07:14:23 → 07:14:29
-  impact: 07:14:29 → 07:24:29
-2026-05-29 13:03:16,683 [INFO] app.processor.log_processor — [CW] alike-prod-backend-app-logs: 13 events in 2 page(s)
-2026-05-29 13:03:16,685 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-app-logs / failure: 13 lines [07:14 – 07:14]
-2026-05-29 13:03:16,952 [INFO] app.processor.log_processor — [CW] alike-prod-backend-app-logs: 52 events in 2 page(s)
-2026-05-29 13:03:16,954 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-app-logs / buildup: 52 lines [07:09 – 07:14]
-2026-05-29 13:03:17,190 [INFO] app.processor.log_processor — [CW] alike-prod-backend-logs: 0 events in 1 page(s)
-2026-05-29 13:03:17,191 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-logs / buildup: 0 lines [07:09 – 07:14]
-2026-05-29 13:03:17,197 [INFO] app.processor.log_processor — [CW] alike-prod-backend-app-logs: 289 events in 2 page(s)
-2026-05-29 13:03:17,199 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-app-logs / impact: 289 lines [07:14 – 07:24]
-2026-05-29 13:03:17,219 [INFO] app.processor.log_processor — [CW] alike-prod-backend-logs: 0 events in 1 page(s)
-2026-05-29 13:03:17,220 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-logs / failure: 0 lines [07:14 – 07:14]
-2026-05-29 13:03:17,506 [INFO] app.processor.log_processor — [CW] alike-prod-backend-system-logs: 30 events in 2 page(s)
-2026-05-29 13:03:17,508 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-system-logs / buildup: 30 lines [07:09 – 07:14]
-2026-05-29 13:03:17,676 [INFO] app.processor.log_processor — [CW] alike-prod-backend-system-logs: 156 events in 2 page(s)
-2026-05-29 13:03:17,677 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-system-logs / impact: 156 lines [07:14 – 07:24]
-2026-05-29 13:03:17,717 [INFO] app.processor.log_processor — [CW] alike-prod-backend-system-logs: 3 events in 2 page(s)
-2026-05-29 13:03:17,718 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-system-logs / failure: 3 lines [07:14 – 07:14]
-2026-05-29 13:03:17,965 [INFO] app.processor.log_processor — [CW] alike-prod-backend-logs: 0 events in 1 page(s)
-2026-05-29 13:03:17,966 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-logs / impact: 0 lines [07:14 – 07:24]
-2026-05-29 13:03:17,988 [INFO] app.processor.log_processor — [Top Error Signals]
+2026-06-01 07:04:38,055 [INFO] app.processor.process_incident — INCIDENT PROCESSOR v3 STARTED
+2026-06-01 07:04:38,057 [INFO] app.processor.process_incident — ============================================================
+2026-06-01 07:04:43,240 [INFO] app.processor.process_incident — [Load] incident=d0a06080-4a80-47ec-9c1b-ce7f58398613 | project='AIOps Test' tag=aiops-testing | region=us-east-1
+2026-06-01 07:04:46,139 [INFO] app.utils.aws_connector — [AWSClientFactory] Loaded credentials for project 'aiops-testing' region=us-east-1
+2026-06-01 07:04:46,152 [INFO] app.processor.process_incident — [Tools] Initialised for d0a06080-4a80-47ec-9c1b-ce7f58398613
+2026-06-01 07:04:46,161 [INFO] app.processor.process_incident — [Status] d0a06080-4a80-47ec-9c1b-ce7f58398613 → triage_started (10%)
+2026-06-01 07:04:52,470 [INFO] app.processor.dependency_resolver — [ALB resolver] Matched DNS 'aiops-alb-1937945577.us-east-1.elb.amazonaws.com' → ARN 'arn:aws:elasticloadbalancing:us-east-1:369606757523:loadbalancer/app/aiops-alb/55261edb7427e571'
+2026-06-01 07:04:53,050 [INFO] app.processor.dependency_resolver — [ALB resolver] Found target i-01cbe3e1e9e371033 state=healthy reason=None
+2026-06-01 07:04:53,054 [INFO] app.processor.dependency_resolver — [ALB resolver] Found target i-0d7409065a555843e state=healthy reason=None
+2026-06-01 07:04:53,056 [INFO] app.processor.dependency_resolver — [ALB resolver] Total targets for ALB: 2
+2026-06-01 07:04:53,063 [INFO] app.processor.dependency_resolver — [DependencyResolver] Resolved 1 dep(s) → 2 unique EC2 target(s): ['i-01cbe3e1e9e371033', 'i-0d7409065a555843e']
+2026-06-01 07:04:53,067 [INFO] app.processor.process_incident — [PreTriage] No short-circuit — full investigation
+2026-06-01 07:04:53,070 [INFO] app.processor.process_incident — [PreSignals] No primary root cause extracted pre-LLM
+2026-06-01 07:04:55,396 [INFO] app.processor.process_incident — [Status] d0a06080-4a80-47ec-9c1b-ce7f58398613 → infra_analysis (30%)
+2026-06-01 07:04:59,408 [INFO] app.agent.graph — [Agent] Starting investigation for incident d0a06080-4a80-47ec-9c1b-ce7f58398613
+2026-06-01 07:05:01,855 [INFO] app.utils.aws_connector — [BedrockClientFactory] Loaded Bedrock credentials region=ap-south-1
+2026-06-01 07:05:03,949 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
+2026-06-01 07:05:05,444 [INFO] app.agent.graph — [Agent] turn complete | tool_calls=1
+2026-06-01 07:05:05,455 [INFO] app.agent.graph — [ToolNode] get_ec2_analysis | args={"instance_ids": ["i-01cbe3e1e9e371033", "i-0d7409065a555843e"]}
+2026-06-01 07:05:05,460 [INFO] app.processor.process_incident — [Status] d0a06080-4a80-47ec-9c1b-ce7f58398613 → infra_analysis (30%)
+2026-06-01 07:05:15,888 [INFO] app.agent.graph — [ToolNode] get_ec2_analysis result: {"instances": {"i-01cbe3e1e9e371033": {"details": {"instance_id": "i-01cbe3e1e9e371033", "instance_type": "t3.micro", "state": "running", "private_ip": "172.31.22.201", "public_ip": "44.223.28.47", "availability_zone": "us-east-1c", "subnet_id": "subnet-0fc229524f637ed10", "vpc_id": "vpc-037a46b5ba2844dae", "launch_time": "2026-06-01 04:44:53+00:00", "ami_id": "ami-091138d0f0d41ff90", "security_groups": [{"id": "sg-02dc2192e316318b4", "name": "launch-wizard-10"}], "tags": {"Created_by": "suresh", "Name": "aiops-test-1", "Project": "Aiops", "Created_for": "testing"}}, "status_checks": {"instance_status": "ok", "system_status": "ok"}, "metrics": {"cpu_percent": 0.7084887926437737, "network_in_bytes": 2203.0, "network_out_bytes": 2562.6, "disk_read_ops": null, "disk_write_ops": null, "status_check_failed": 0.0, "window_minutes": 15}}, "i-0d7409065a555843e": {"details": {"instance_id": "i-0d7409065a555843e", "instance_type": "t3.micro", "state": "running", "private_ip": "172.31.3.63", "public_ip": "44.204.212.38", "availability_zone": "us-east-1a", "subnet_id": "subnet-06c67918dbc079ad3", "vpc_id": "vpc-037a46b5ba2844dae", "launch_time": "2026-06-01 04:44:53+00:00", "ami_id": "ami-091138d0f0d41ff90", "security_groups": [{"id": "sg-04f1675ba6b3bff6e", "name": "launch-wizard-12"}], "tags": {"Created_by": "suresh", "Name": "aiops-test-2", "Created_for": "aiops-test", "Project": "meyiconnect-Aiops"}}, "status_checks": {"instance_status": "ok", "system_status": "ok"}, "metrics": {"cpu_percent": 0.8133305833791658, "network_in_bytes": 2977.8, "network_out_bytes": 3343.0, "disk_read_ops": null, "disk_write_ops": null, "status_check_failed": 0.0, "window_minutes": 15}}}, "findings": [{"category": "compute", "message": "EC2 instance i-01cbe3e1e9e371033 state is running"}, {"category": "compute", "message": "EC2 instance i-0d7409065a555843e state is running"}]}...
+2026-06-01 07:05:15,899 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
+2026-06-01 07:05:17,702 [INFO] app.agent.graph — [Agent] turn complete | tool_calls=1
+2026-06-01 07:05:17,707 [INFO] app.agent.graph — [ToolNode] get_compressed_logs | args={"log_groups": ["aiops-app-test-logs", "aiops-system-test-logs"]}
+2026-06-01 07:05:17,708 [INFO] app.processor.process_incident — [Status] d0a06080-4a80-47ec-9c1b-ce7f58398613 → logs_analysis (60%)
+2026-06-01 07:05:20,556 [INFO] app.processor.log_processor — [Start] down_time=05:01:34 | window=-30min/+10min | groups=['aiops-app-test-logs', 'aiops-system-test-logs']
+2026-06-01 07:05:39,548 [INFO] app.processor.log_processor — [CW] aiops-system-test-logs: 6563 events in 3 page(s)
+2026-06-01 07:05:39,765 [INFO] app.processor.log_processor — [Phase-A] aiops-system-test-logs: 31/6563 error events [04:31 – 05:11]
+2026-06-01 07:05:50,709 [INFO] app.processor.log_processor — [CW] aiops-app-test-logs: 14623 events in 2 page(s)
+2026-06-01 07:05:51,085 [INFO] app.processor.log_processor — [Phase-A] aiops-app-test-logs: 92/14623 error events [04:31 – 05:11]
+2026-06-01 07:05:51,090 [INFO] app.processor.log_processor — [Phase-A] 123 total error events
+2026-06-01 07:05:51,093 [INFO] app.processor.log_processor — [Phase-B] Found sustained spike starting at 04:45:07 with 123 errors in 5m
+2026-06-01 07:05:51,098 [INFO] app.processor.log_processor — [Phase-B] First error: 04:45:07 in aiops-app-test-logs | true_start anchored → 04:40:07
+2026-06-01 07:05:51,101 [INFO] app.processor.log_processor — [Timeline Stages]
+  buildup: 04:40:07 → 04:45:07
+  failure: 04:45:07 → 05:01:34
+  impact: 05:01:34 → 05:11:34
+2026-06-01 07:05:52,426 [INFO] app.processor.log_processor — [CW] aiops-system-test-logs: 0 events in 1 page(s)
+2026-06-01 07:05:52,431 [INFO] app.processor.log_processor — [Phase-C] aiops-system-test-logs / impact: 0 lines [05:01 – 05:11]
+2026-06-01 07:05:52,430 [INFO] app.processor.log_processor — [CW] aiops-system-test-logs: 0 events in 1 page(s)
+2026-06-01 07:05:52,436 [INFO] app.processor.log_processor — [Phase-C] aiops-system-test-logs / buildup: 0 lines [04:40 – 04:45]
+2026-06-01 07:05:53,485 [INFO] app.processor.log_processor — [CW] aiops-app-test-logs: 41 events in 3 page(s)
+2026-06-01 07:05:53,494 [INFO] app.processor.log_processor — [Phase-C] aiops-app-test-logs / impact: 41 lines [05:01 – 05:11]
+2026-06-01 07:05:54,663 [INFO] app.processor.log_processor — [CW] aiops-app-test-logs: 191 events in 2 page(s)
+2026-06-01 07:05:54,666 [INFO] app.processor.log_processor — [Phase-C] aiops-app-test-logs / buildup: 191 lines [04:40 – 04:45]
+2026-06-01 07:06:26,704 [INFO] app.processor.log_processor — [CW] aiops-system-test-logs: 6563 events in 3 page(s)
+2026-06-01 07:06:26,710 [INFO] app.processor.log_processor — [Phase-C] aiops-system-test-logs / failure: 6563 lines [04:45 – 05:01]
+2026-06-01 07:06:47,871 [INFO] app.processor.log_processor — [CW] aiops-app-test-logs: 14623 events in 2 page(s)
+2026-06-01 07:06:47,880 [INFO] app.processor.log_processor — [Phase-C] aiops-app-test-logs / failure: 14623 lines [04:45 – 05:01]
+2026-06-01 07:06:48,139 [INFO] app.processor.log_processor — [Top Error Signals]
   • [RARE-HIGH-SIGNAL] [EXCEPTION] Traceback (most recent call last):
-  File "/home/ubuntu/aiops-testcase/app.py", line 149, in get_incidents
+  File "/home/ubuntu/aiops-testcase/app.py", line 145, in get_incidents
     with get_db() as conn:
          ~~~~~~^^
   File "/usr/lib/python3.14/contextlib.py", line 141, in __enter__
     return next(self.gen)
-  File "/home/ubuntu/aiops-testcase/app.py", line 48, i
-  • [x3] [EXCEPTION] Traceback (most recent call last):
-  File "/home/ubuntu/aiops-testcase/app.py", line 192, in get_incident_details
+  File "/home/ubuntu/aiops-testcase/app.py", line 44, i
+  • [RARE-HIGH-SIGNAL] [CASCADE-SYMPTOM of postgres, mysql, redis, rabbitmq, mongodb, elasticsearch] [EXCEPTION] Traceback (most recent call last):
+  File "/home/ubuntu/aiops-testcase/app.py", line 95, in health
+    conn = psycopg2.connect(
+        DB_URL,
+        connect_timeout=3
+    )
+  File "/home/ubuntu/aiops-testcase/venv/lib/python3.14/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn =
+  • [x4] [TIMEOUT] connection to server at "dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com" (18.205.164.157), port 5432 failed: Connection timed out
+	Is the server running on that host and accepting TCP/IP connections?
+  • [x2] [TIMEOUT] psycopg2.OperationalError: connection to server at "dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com" (35.174.144.149), port 5432 failed: Connection timed out
+	Is the server running on that host and accepting TCP/IP connections?
+  • [CASCADE-SYMPTOM of postgres, mysql, redis, rabbitmq, mongodb, elasticsearch] [x2] [TIMEOUT] connection to server at "dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com" (18.205.164.157), port 5432 failed: timeout expired
+  • [HTTP-500] 2026-05-30 09:57:27,599 INFO request_completed request_id=1379c231-ab58-46d4-9ebe-0ed9a73d1be0 status_code=500 duration_ms=403797
+  • [HTTP-500] 2026-05-30 13:21:08,500 INFO request_completed request_id=8d1e39ee-48d9-4618-9844-c2308551c93d status_code=200 duration_ms=1
+  • [HTTP-500] 2026-05-30 14:25:18,244 INFO request_completed request_id=5bc7982d-e90b-4824-bc3e-18bc6146264a status_code=500 duration_ms=9013
+  • [HTTP-500] 2026-05-30 14:25:29,500 INFO request_completed request_id=851a3054-74da-4826-b89a-f2d7b510b7fc status_code=404 duration_ms=0
+  • [HTTP-500] 2026-05-30 14:25:41,500 INFO request_started request_id=ffd768aa-ed15-44f2-8ff2-f3d6eac2b201 path=/adm/current/phpinfo.php
+2026-06-01 07:06:48,141 [INFO] app.processor.log_processor — [Done] groups=2 stages=3 total_raw=21418 top_errors=10
+2026-06-01 07:06:48,155 [INFO] app.agent.graph — [ToolNode] get_compressed_logs result: {"adaptive_window": {"before_minutes": 30, "after_minutes": 10}, "anchor": {"true_start": "2026-06-01T04:40:07.218000+00:00", "first_error_ts": "2026-06-01T04:45:07.218000+00:00", "first_error_msg": "2026-05-30 09:57:27,596 ERROR failed_to_fetch_incidents", "first_error_group": "aiops-app-test-logs", "first_error_weight": 15}, "top_errors": ["[RARE-HIGH-SIGNAL] [EXCEPTION] Traceback (most recent call last):\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 145, in get_incidents\n    with get_db() as conn:\n         ~~~~~~^^\n  File \"/usr/lib/python3.14/contextlib.py\", line 141, in __enter__\n    return next(self.gen)\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 44, i", "[RARE-HIGH-SIGNAL] [CASCADE-SYMPTOM of postgres, mysql, redis, rabbitmq, mongodb, elasticsearch] [EXCEPTION] Traceback (most recent call last):\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 95, in health\n    conn = psycopg2.connect(\n        DB_URL,\n        connect_timeout=3\n    )\n  File \"/home/ubuntu/aiops-testcase/venv/lib/python3.14/site-packages/psycopg2/__init__.py\", line 122, in connect\n    conn =", "[x4] [TIMEOUT] connection to server at \"dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com\" (18.205.164.157), port 5432 failed: Connection timed out\n\tIs the server running on that host and accepting TCP/IP connections?", "[x2] [TIMEOUT] psycopg2.OperationalError: connection to server at \"dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com\" (35.174.144.149), port 5432 failed: Connection timed out\n\tIs the server running on that host and accepting TCP/IP connections?", "[CASCADE-SYMPTOM of postgres, mysql, redis, rabbitmq, mongodb, elasticsearch] [x2] [TIMEOUT] connection to server at \"dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com\" (18.205.164.157), port 5432 failed: timeout expired", "[HTTP-500] 2026-05-30 09:57:27,599 INFO request_completed request_id=1379c231-ab58-46d4-9ebe-0ed9a73d1be0 status_code=500 duration_ms=403797", "[HTTP-500] 2026-05-30 13:21:08,500 INFO request_completed request_id=8d1e39ee-48d9-4618-9844-c2308551c93d status_code=200 duration_ms=1", "[HTTP-500] 2026-05-30 14:25:18,244 INFO request_completed request_id=5bc7982d-e90b-4824-bc3e-18bc6146264a status_code=500 duration_ms=9013"], "total_raw_lines": 21418, "group_summaries": {"aiops-app-test-logs": {"buildup": {"stage_label": "Pre-failure buildup", "window": "04:40 \u2013 04:45", "total_raw": 191, "error_count": 6, "warn_count": 0, "top_clusters": [{"level": "error", "count": 1, "weight_label": "exception", "is_rare": true, "cascade_suspect": false, "upstream_services": [], "sample": "Traceback (most recent call last):\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 145, in get_incidents\n    with get_db() as conn:\n         ~~~~~~^^\n  File \"/usr/lib/python3.14/contextlib.py\", line"}, {"level": "error", "count": 2, "weight_label": "timeout", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "connection to server at \"dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com\" (18.205.164.157), port 5432 failed: Connection timed out\n\tIs the server running on that host and accepting TCP/IP conn"}, {"level": "error", "count": 1, "weight_label": "http-500", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "2026-05-30 09:57:27,599 INFO request_completed request_id=1379c231-ab58-46d4-9ebe-0ed9a73d1be0 status_code=500 duration_ms=403797"}, {"level": "error", "count": 1, "weight_label": "timeout", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "psycopg2.OperationalError: connection to server at \"dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com\" (35.174.144.149), port 5432 failed: Connection timed out\n\tIs the server running on that hos"}, {"level": "error", "count": 1, "weight_label": "generic-error", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "2026-05-30 09:57:27,596 ERROR failed_to_fetch_incidents"}]}, "failure": {"stage_label": "Failure propagation", "window": "04:45 \u2013 05:01", "total_raw": 14623, "error_count": 92, "warn_count": 0, "top_clusters": [{"level": "error", "count": 1, "weight_label": "exception", "is_rare": true, "cascade_suspect": true, "upstream_services": ["postgres", "mysql", "redis", "rabbitmq", "mongodb", "elasticsearch"], "sample": "Traceback (most recent call last):\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 95, in health\n    conn = psycopg2.connect(\n        DB_URL,\n        connect_timeout=3\n    )\n  File \"/home/ubuntu/aio"}, {"level": "error", "count": 2, "weight_label": "exception", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "Traceback (most recent call last):\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 145, in get_incidents\n    with get_db() as conn:\n         ~~~~~~^^\n  File \"/usr/lib/python3.14/contextlib.py\", line"}, {"level": "error", "count": 4, "weight_label": "timeout", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "connection to server at \"dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com\" (18.205.164.157), port 5432 failed: Connection timed out\n\tIs the server running on that host and accepting TCP/IP conn"}, {"level": "error", "count": 2, "weight_label": "timeout", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "psycopg2.OperationalError: connection to server at \"dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com\" (35.174.144.149), port 5432 failed: Connection timed out\n\tIs the server running on that hos"}, {"level": "error", "count": 2, "weight_label": "timeout", "is_rare": false, "cascade_suspect": true, "upstream_services": ["postgres", "mysql", "redis", "rabbitmq", "mongodb", "elasticsearch"], "sample": "connection to server at \"dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com\" (18.205.164.157), port 5432 failed: timeout expired"}]}, "impact": {"stage_label": "Impact / recovery", "window": "05:01 \u2013 05:11", "total_raw": 41, "error_count": 0, "warn_count": 0, "top_clusters": []}}, "aiops-system-test-logs": {"buildup": {"stage_label": "Pre-failure buildup", "window": "04:40 \u2013 04:45", "total_raw": 0, "error_count": 0, "warn_count": 0, "top_clusters": []}, "failure": {"stage_label": "Failure propagation", "window": "04:45 \u2013 05:01", "total_raw": 6563, "error_count": 0, "warn_count": 0, "top_clusters": []}, "impact": {"stage_label": "Impact / recovery", "window": "05:01 \u2013 05:11", "total_raw": 0, "error_count": 0, "warn_count": 0, "top_clusters": []}}}}...
+2026-06-01 07:06:48,172 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
+2026-06-01 07:06:51,878 [INFO] app.agent.graph — [Agent] turn complete | tool_calls=1
+2026-06-01 07:06:51,881 [INFO] app.agent.graph — [ToolNode] investigate_network_path | args={"source_instance_id": "i-01cbe3e1e9e371033", "destination_host": "dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com", "destination_port": 5432}
+2026-06-01 07:06:51,883 [INFO] app.processor.process_incident — [Status] d0a06080-4a80-47ec-9c1b-ce7f58398613 → infra_analysis (30%)
+2026-06-01 07:06:58,491 [INFO] app.agent.graph — [ToolNode] investigate_network_path result: {"dns_resolution": "UNKNOWN", "route_table": "PASS", "nacl_outbound": "PASS", "nacl_inbound": "PASS", "security_group_outbound": "FAIL", "blocked_layer": "security_group", "blocked_port": 5432, "security_group_details": {"security_groups": [{"group_id": "sg-02dc2192e316318b4", "group_name": "launch-wizard-10", "outbound_rules": [{"port_range": "80-80", "protocol": "tcp", "allows_destination_port": false}]}]}, "nacl_details": {"nacls": [{"nacl_id": "acl-0b70bfbd62cfa0cb4", "outbound_allows_port": true, "inbound_allows_ephemeral": true, "outbound_rule_count": 2, "inbound_rule_count": 2}]}, "route_table_details": {"route_tables": [{"route_table_id": "rtb-0c363dd3d96b17366", "routes": [{"destination": "172.31.0.0/16", "gateway": "local", "state": "active", "is_default": false}, {"destination": "0.0.0.0/0", "gateway": "igw-0c16907ef18ca4e68", "state": "active", "is_default": true}]}]}, "summary": "BLOCKED: Security group outbound rule does not allow TCP port 5432. Instance cannot reach dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com:5432. Check outbound rules on: sg-02dc2192e316318b4", "findings": [{"category": "network", "message": "Security group blocks outbound 5432"}]}...
+2026-06-01 07:06:58,501 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
+2026-06-01 07:07:00,507 [INFO] app.agent.graph — [Agent] turn complete | tool_calls=1
+2026-06-01 07:07:00,513 [INFO] app.agent.graph — [ToolNode] get_security_group_rules | args={"security_group_ids": ["sg-02dc2192e316318b4"]}
+2026-06-01 07:07:02,241 [INFO] app.agent.graph — [ToolNode] get_security_group_rules result: {"security_groups": [{"group_id": "sg-02dc2192e316318b4", "group_name": "launch-wizard-10", "vpc_id": "vpc-037a46b5ba2844dae", "inbound_rules": [{"protocol": "tcp", "port_range": "80-80", "sources": ["0.0.0.0/0", "sg-037292134be360dd5"]}, {"protocol": "tcp", "port_range": "22-22", "sources": ["0.0.0.0/0"]}], "outbound_rules": [{"protocol": "tcp", "port_range": "80-80", "destinations": ["0.0.0.0/0"]}], "inbound_count": 2, "outbound_count": 1}]}...
+2026-06-01 07:07:02,245 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
+2026-06-01 07:07:04,235 [INFO] app.agent.graph — [Agent] turn complete | tool_calls=1
+2026-06-01 07:07:04,239 [INFO] app.agent.graph — [ToolNode] check_cloudtrail_sg_changes | args={"security_group_id": "sg-02dc2192e316318b4"}
+2026-06-01 07:07:04,243 [INFO] app.processor.process_incident — [Status] d0a06080-4a80-47ec-9c1b-ce7f58398613 → infra_analysis (30%)
+2026-06-01 07:07:10,680 [INFO] app.agent.graph — [ToolNode] check_cloudtrail_sg_changes result: {"changes_found": true, "change_count": 2, "changes": [{"event_name": "RevokeSecurityGroupEgress", "event_time": "2026-06-01T05:01:34+00:00", "user": "AWSReservedSSO_Meyi-Test-DevOps_a701c72ac6d9ae85", "minutes_before_incident": 0.0, "changed_rules": [{"protocol": "-1", "port_range": "ALL", "cidrs": ["0.0.0.0/0"]}], "source_ip": "162.216.141.19"}, {"event_name": "AuthorizeSecurityGroupEgress", "event_time": "2026-06-01T04:48:53+00:00", "user": "AWSReservedSSO_Meyi-Test-DevOps_a701c72ac6d9ae85", "minutes_before_incident": 12.7, "changed_rules": [{"protocol": "-1", "port_range": "ALL", "cidrs": ["0.0.0.0/0"]}], "source_ip": "103.140.50.219"}], "probable_cause": "Security group sg-02dc2192e316318b4 was modified by 'AWSReservedSSO_Meyi-Test-DevOps_a701c72ac6d9ae85' at 2026-06-01T04:48:53+00:00 (12.7 min before incident). Event: AuthorizeSecurityGroupEgress. Changed rules: [{\"protocol\": \"-1\", \"port_range\": \"ALL\", \"cidrs\": [\"0.0.0.0/0\"]}]", "findings": [{"category": "change_history", "message": "CloudTrail shows SG sg-02dc2192e316318b4 modified by AWSReservedSSO_Meyi-Test-DevOps_a701c72ac6d9ae85"}]}...
+2026-06-01 07:07:10,698 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
+2026-06-01 07:07:16,369 [INFO] app.agent.graph — [Agent] turn complete | tool_calls=0
+2026-06-01 07:07:16,376 [INFO] app.agent.graph — [Agent] ReAct loop done | incident=d0a06080-4a80-47ec-9c1b-ce7f58398613 | messages=13 | tool_calls=5
+2026-06-01 07:07:16,378 [INFO] app.agent.graph — [Extraction] Starting fresh extraction conversation
+2026-06-01 07:07:16,383 [INFO] app.agent.graph — [Extraction] Fresh message count=2
+2026-06-01 07:07:19,084 [INFO] app.utils.aws_connector — [BedrockClientFactory] Loaded Bedrock credentials region=ap-south-1
+2026-06-01 07:07:21,141 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
+2026-06-01 07:07:23,997 [INFO] app.agent.graph — [Extraction] Structured output success
+2026-06-01 07:07:24,012 [INFO] app.agent.graph — [Agent] Complete | incident=d0a06080-4a80-47ec-9c1b-ce7f58398613 | structured=yes
+2026-06-01 07:07:24,023 [INFO] app.processor.process_incident — [Agent] Finished | tool_calls=5 | messages=13 | structured=yes
+2026-06-01 07:07:24,029 [INFO] app.processor.process_incident — [Status] d0a06080-4a80-47ec-9c1b-ce7f58398613 → remediation_generated (90%)
+2026-06-01 07:07:29,804 [INFO] app.processor.process_incident — [SaveRCA] Updated 1 row(s) for d0a06080-4a80-47ec-9c1b-ce7f58398613
+2026-06-01 07:07:30,068 [INFO] app.processor.process_incident — ============================================================
+2026-06-01 07:07:30,085 [INFO] app.processor.process_incident — INCIDENT COMPLETED: d0a06080-4a80-47ec-9c1b-ce7f58398613
+2026-06-01 07:07:30,113 [INFO] app.processor.process_incident — ============================================================
+2026-06-01 07:07:30,139 [INFO] app.processor.worker — [Worker] Completed incident_id=d0a06080-4a80-47ec-9c1b-ce7f58398613
+2026-06-01 09:41:04,261 [INFO] app.main — Shutting down worker...
+2026-06-01 09:42:00,086 [INFO] app.main — Starting incident processor worker...
+2026-06-01 09:42:00,091 [INFO] app.processor.worker — [Worker] Incident processor worker started.
+2026-06-01 09:42:11,933 [INFO] app.queue.manager — [Queue] Enqueued incident_id=d0a06080-4a80-47ec-9c1b-ce7f58398613 | queue_size=1
+2026-06-01 09:42:11,938 [INFO] app.api.routes.queue — [/queue/enqueue] incident_id=d0a06080-4a80-47ec-9c1b-ce7f58398613 accepted
+2026-06-01 09:42:11,952 [INFO] app.processor.worker — [Worker] Picked up incident_id=d0a06080-4a80-47ec-9c1b-ce7f58398613
+2026-06-01 09:42:11,959 [INFO] app.processor.process_incident — 
+
+
+
+
+
+
+
+
+
+
+
+
+============================================================
+2026-06-01 09:42:11,968 [INFO] app.processor.process_incident — INCIDENT PROCESSOR v3 STARTED
+2026-06-01 09:42:11,973 [INFO] app.processor.process_incident — ============================================================
+2026-06-01 09:42:19,584 [INFO] app.processor.process_incident — [Load] incident=d0a06080-4a80-47ec-9c1b-ce7f58398613 | project='AIOps Test' tag=aiops-testing | region=us-east-1
+2026-06-01 09:42:21,949 [INFO] app.utils.aws_connector — [AWSClientFactory] Loaded credentials for project 'aiops-testing' region=us-east-1
+2026-06-01 09:42:21,952 [INFO] app.processor.process_incident — [Tools] Initialised for d0a06080-4a80-47ec-9c1b-ce7f58398613
+2026-06-01 09:42:21,954 [INFO] app.processor.process_incident — [Status] d0a06080-4a80-47ec-9c1b-ce7f58398613 → triage_started (10%)
+2026-06-01 09:42:24,945 [DEBUG] botocore.hooks — Changing event name from creating-client-class.iot-data to creating-client-class.iot-data-plane
+2026-06-01 09:42:24,952 [DEBUG] botocore.hooks — Changing event name from before-call.apigateway to before-call.api-gateway
+2026-06-01 09:42:24,955 [DEBUG] botocore.hooks — Changing event name from request-created.machinelearning.Predict to request-created.machine-learning.Predict
+2026-06-01 09:42:24,958 [DEBUG] botocore.hooks — Changing event name from before-parameter-build.autoscaling.CreateLaunchConfiguration to before-parameter-build.auto-scaling.CreateLaunchConfiguration
+2026-06-01 09:42:24,961 [DEBUG] botocore.hooks — Changing event name from before-parameter-build.route53 to before-parameter-build.route-53
+2026-06-01 09:42:24,968 [DEBUG] botocore.hooks — Changing event name from request-created.cloudsearchdomain.Search to request-created.cloudsearch-domain.Search
+2026-06-01 09:42:24,971 [DEBUG] botocore.hooks — Changing event name from docs.*.autoscaling.CreateLaunchConfiguration.complete-section to docs.*.auto-scaling.CreateLaunchConfiguration.complete-section
+2026-06-01 09:42:24,977 [DEBUG] botocore.hooks — Changing event name from before-parameter-build.logs.CreateExportTask to before-parameter-build.cloudwatch-logs.CreateExportTask
+2026-06-01 09:42:24,980 [DEBUG] botocore.hooks — Changing event name from docs.*.logs.CreateExportTask.complete-section to docs.*.cloudwatch-logs.CreateExportTask.complete-section
+2026-06-01 09:42:24,986 [DEBUG] botocore.hooks — Changing event name from before-parameter-build.cloudsearchdomain.Search to before-parameter-build.cloudsearch-domain.Search
+2026-06-01 09:42:24,990 [DEBUG] botocore.hooks — Changing event name from docs.*.cloudsearchdomain.Search.complete-section to docs.*.cloudsearch-domain.Search.complete-section
+2026-06-01 09:42:25,012 [DEBUG] botocore.loaders — Loading JSON file: /usr/local/lib/python3.11/site-packages/botocore/data/endpoints.json
+2026-06-01 09:42:25,170 [DEBUG] botocore.loaders — Loading JSON file: /usr/local/lib/python3.11/site-packages/botocore/data/sdk-default-configuration.json
+2026-06-01 09:42:25,173 [DEBUG] botocore.hooks — Event choose-service-name: calling handler <function handle_service_name_alias at 0x7fb77fbb71a0>
+2026-06-01 09:42:25,642 [DEBUG] botocore.loaders — Loading JSON file: /usr/local/lib/python3.11/site-packages/botocore/data/elbv2/2015-12-01/service-2.json.gz
+2026-06-01 09:42:25,777 [DEBUG] botocore.loaders — Loading JSON file: /usr/local/lib/python3.11/site-packages/botocore/data/elbv2/2015-12-01/endpoint-rule-set-1.json.gz
+2026-06-01 09:42:25,789 [DEBUG] botocore.loaders — Loading JSON file: /usr/local/lib/python3.11/site-packages/botocore/data/partitions.json
+2026-06-01 09:42:25,800 [DEBUG] botocore.hooks — Event creating-client-class.elastic-load-balancing-v2: calling handler <function add_generate_presigned_url at 0x7fb77fb4cfe0>
+2026-06-01 09:42:25,811 [DEBUG] botocore.configprovider — Looking for endpoint for elbv2 via: environment_service
+2026-06-01 09:42:25,815 [DEBUG] botocore.configprovider — Looking for endpoint for elbv2 via: environment_global
+2026-06-01 09:42:25,822 [DEBUG] botocore.configprovider — Looking for endpoint for elbv2 via: config_service
+2026-06-01 09:42:25,830 [DEBUG] botocore.configprovider — Looking for endpoint for elbv2 via: config_global
+2026-06-01 09:42:25,832 [DEBUG] botocore.configprovider — No configured endpoint found.
+2026-06-01 09:42:25,850 [DEBUG] botocore.endpoint — Setting elasticloadbalancing timeout as (60, 60)
+2026-06-01 09:42:25,885 [DEBUG] botocore.loaders — Loading JSON file: /usr/local/lib/python3.11/site-packages/botocore/data/_retry.json
+2026-06-01 09:42:25,897 [DEBUG] botocore.client — Registering retry handlers for service: elbv2
+2026-06-01 09:42:26,045 [DEBUG] botocore.loaders — Loading JSON file: /usr/local/lib/python3.11/site-packages/botocore/data/elbv2/2015-12-01/paginators-1.json
+2026-06-01 09:42:26,053 [DEBUG] botocore.hooks — Event before-parameter-build.elastic-load-balancing-v2.DescribeLoadBalancers: calling handler <function generate_idempotent_uuid at 0x7fb77fbd8ae0>
+2026-06-01 09:42:26,057 [DEBUG] botocore.hooks — Event before-parameter-build.elastic-load-balancing-v2.DescribeLoadBalancers: calling handler <function _handle_request_validation_mode_member at 0x7fb77fbdb600>
+2026-06-01 09:42:26,061 [DEBUG] botocore.regions — Calling endpoint provider with parameters: {'Region': 'us-east-1', 'UseDualStack': False, 'UseFIPS': False}
+2026-06-01 09:42:26,067 [DEBUG] botocore.regions — Endpoint provider result: https://elasticloadbalancing.us-east-1.amazonaws.com
+2026-06-01 09:42:26,072 [DEBUG] botocore.hooks — Event before-call.elastic-load-balancing-v2.DescribeLoadBalancers: calling handler <function add_recursion_detection_header at 0x7fb77fb95c60>
+2026-06-01 09:42:26,074 [DEBUG] botocore.hooks — Event before-call.elastic-load-balancing-v2.DescribeLoadBalancers: calling handler <function inject_api_version_header_if_needed at 0x7fb77fbda5c0>
+2026-06-01 09:42:26,077 [DEBUG] botocore.endpoint — Making request for OperationModel(name=DescribeLoadBalancers) with params: {'url_path': '/', 'query_string': '', 'method': 'POST', 'headers': {'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8', 'User-Agent': 'Boto3/1.39.7 md/Botocore#1.39.7 ua/2.1 os/linux#5.15.167.4-microsoft-standard-WSL2 md/arch#x86_64 lang/python#3.11.15 md/pyimpl#CPython m/Z,D,b,C cfg/retry-mode#legacy Botocore/1.39.7 x-client-framework:langchain-aws'}, 'body': {'Action': 'DescribeLoadBalancers', 'Version': '2015-12-01'}, 'url': 'https://elasticloadbalancing.us-east-1.amazonaws.com/', 'context': {'client_region': 'us-east-1', 'client_config': <botocore.config.Config object at 0x7fb77e3d09d0>, 'has_streaming_input': False, 'auth_type': None, 'unsigned_payload': None, 'auth_options': ['aws.auth#sigv4']}}
+2026-06-01 09:42:26,083 [DEBUG] botocore.hooks — Event request-created.elastic-load-balancing-v2.DescribeLoadBalancers: calling handler <bound method RequestSigner.handler of <botocore.signers.RequestSigner object at 0x7fb75c9fcd90>>
+2026-06-01 09:42:26,088 [DEBUG] botocore.hooks — Event choose-signer.elastic-load-balancing-v2.DescribeLoadBalancers: calling handler <function set_operation_specific_signer at 0x7fb77fbd8860>
+2026-06-01 09:42:26,092 [DEBUG] botocore.hooks — Event choose-signer.elastic-load-balancing-v2.DescribeLoadBalancers: calling handler <function _set_auth_scheme_preference_signer at 0x7fb77fbdb740>
+2026-06-01 09:42:26,098 [DEBUG] botocore.auth — Calculating signature using v4 auth.
+2026-06-01 09:42:26,103 [DEBUG] botocore.auth — CanonicalRequest:
+POST
+/
+
+content-type:application/x-www-form-urlencoded; charset=utf-8
+host:elasticloadbalancing.us-east-1.amazonaws.com
+x-amz-date:20260601T094226Z
+
+content-type;host;x-amz-date
+291737628a8822c591d69bcc8ab0023e2d91be3e5358172d89f534bec412a356
+2026-06-01 09:42:26,109 [DEBUG] botocore.auth — StringToSign:
+AWS4-HMAC-SHA256
+20260601T094226Z
+20260601/us-east-1/elasticloadbalancing/aws4_request
+d9991b81f4479d88bf2fc08d7370440f2c101be991afac88b699d9247d39a731
+2026-06-01 09:42:26,114 [DEBUG] botocore.auth — Signature:
+45cdb121017bb86738f495e09c647eda5bbdc03f348f2a77652a4f90c85c28b5
+2026-06-01 09:42:26,120 [DEBUG] botocore.hooks — Event request-created.elastic-load-balancing-v2.DescribeLoadBalancers: calling handler <bound method UserAgentString.rebuild_and_replace_user_agent_handler of <botocore.useragent.UserAgentString object at 0x7fb75c9e6010>>
+2026-06-01 09:42:26,129 [DEBUG] botocore.hooks — Event request-created.elastic-load-balancing-v2.DescribeLoadBalancers: calling handler <function add_retry_headers at 0x7fb77fbdae80>
+2026-06-01 09:42:26,133 [DEBUG] botocore.endpoint — Sending http request: <AWSPreparedRequest stream_output=False, method=POST, url=https://elasticloadbalancing.us-east-1.amazonaws.com/, headers={'Content-Type': b'application/x-www-form-urlencoded; charset=utf-8', 'User-Agent': b'Boto3/1.39.7 md/Botocore#1.39.7 ua/2.1 os/linux#5.15.167.4-microsoft-standard-WSL2 md/arch#x86_64 lang/python#3.11.15 md/pyimpl#CPython m/Z,D,b,C cfg/retry-mode#legacy Botocore/1.39.7 x-client-framework:langchain-aws', 'X-Amz-Date': b'20260601T094226Z', 'Authorization': b'AWS4-HMAC-SHA256 Credential=AKIAVMDSHRSJQUO7LL56/20260601/us-east-1/elasticloadbalancing/aws4_request, SignedHeaders=content-type;host;x-amz-date, Signature=45cdb121017bb86738f495e09c647eda5bbdc03f348f2a77652a4f90c85c28b5', 'amz-sdk-invocation-id': b'bc104fa6-8e6c-4ba4-b5c8-d8c0f6d4a89c', 'amz-sdk-request': b'attempt=1', 'Content-Length': '47'}>
+2026-06-01 09:42:26,146 [DEBUG] botocore.httpsession — Certificate path: /usr/local/lib/python3.11/site-packages/certifi/cacert.pem
+2026-06-01 09:42:26,150 [DEBUG] urllib3.connectionpool — Starting new HTTPS connection (1): elasticloadbalancing.us-east-1.amazonaws.com:443
+2026-06-01 09:42:27,768 [DEBUG] urllib3.connectionpool — https://elasticloadbalancing.us-east-1.amazonaws.com:443 "POST / HTTP/1.1" 200 1764
+2026-06-01 09:42:27,976 [DEBUG] botocore.parsers — Response headers: {'x-amzn-RequestId': '0ee8231a-3cba-4481-8953-339e6fa539d9', 'Content-Type': 'text/xml', 'Content-Length': '1764', 'Date': 'Mon, 01 Jun 2026 09:42:28 GMT'}
+2026-06-01 09:42:27,984 [DEBUG] botocore.parsers — Response body:
+b'<DescribeLoadBalancersResponse xmlns="http://elasticloadbalancing.amazonaws.com/doc/2015-12-01/">\n  <DescribeLoadBalancersResult>\n    <LoadBalancers>\n      <member>\n        <LoadBalancerArn>arn:aws:elasticloadbalancing:us-east-1:369606757523:loadbalancer/app/aiops-alb/55261edb7427e571</LoadBalancerArn>\n        <Scheme>internet-facing</Scheme>\n        <AvailabilityZones>\n          <member>\n            <SubnetId>subnet-06bad5dcc715fa170</SubnetId>\n            <ZoneName>us-east-1b</ZoneName>\n            <LoadBalancerAddresses/>\n          </member>\n          <member>\n            <SubnetId>subnet-06c67918dbc079ad3</SubnetId>\n            <ZoneName>us-east-1a</ZoneName>\n            <LoadBalancerAddresses/>\n          </member>\n          <member>\n            <SubnetId>subnet-0fc229524f637ed10</SubnetId>\n            <ZoneName>us-east-1c</ZoneName>\n            <LoadBalancerAddresses/>\n          </member>\n        </AvailabilityZones>\n        <DNSName>aiops-alb-1937945577.us-east-1.elb.amazonaws.com</DNSName>\n        <Type>application</Type>\n        <IpAddressType>ipv4</IpAddressType>\n        <LoadBalancerName>aiops-alb</LoadBalancerName>\n        <VpcId>vpc-037a46b5ba2844dae</VpcId>\n        <CanonicalHostedZoneId>Z35SXDOTRQ7X7K</CanonicalHostedZoneId>\n        <EnablePrefixForIpv6SourceNat>off</EnablePrefixForIpv6SourceNat>\n        <CreatedTime>2026-05-20T12:00:35.239Z</CreatedTime>\n        <SecurityGroups>\n          <member>sg-037292134be360dd5</member>\n        </SecurityGroups>\n        <State>\n          <Code>active</Code>\n        </State>\n      </member>\n    </LoadBalancers>\n  </DescribeLoadBalancersResult>\n  <ResponseMetadata>\n    <RequestId>0ee8231a-3cba-4481-8953-339e6fa539d9</RequestId>\n  </ResponseMetadata>\n</DescribeLoadBalancersResponse>\n'
+2026-06-01 09:42:28,001 [DEBUG] botocore.hooks — Event needs-retry.elastic-load-balancing-v2.DescribeLoadBalancers: calling handler <botocore.retryhandler.RetryHandler object at 0x7fb77e85ae50>
+2026-06-01 09:42:28,006 [DEBUG] botocore.retryhandler — No retry needed.
+2026-06-01 09:42:28,011 [INFO] app.processor.dependency_resolver — [ALB resolver] Matched DNS 'aiops-alb-1937945577.us-east-1.elb.amazonaws.com' → ARN 'arn:aws:elasticloadbalancing:us-east-1:369606757523:loadbalancer/app/aiops-alb/55261edb7427e571'
+2026-06-01 09:42:28,015 [DEBUG] botocore.hooks — Event before-parameter-build.elastic-load-balancing-v2.DescribeTargetGroups: calling handler <function generate_idempotent_uuid at 0x7fb77fbd8ae0>
+2026-06-01 09:42:28,018 [DEBUG] botocore.hooks — Event before-parameter-build.elastic-load-balancing-v2.DescribeTargetGroups: calling handler <function _handle_request_validation_mode_member at 0x7fb77fbdb600>
+2026-06-01 09:42:28,022 [DEBUG] botocore.regions — Calling endpoint provider with parameters: {'Region': 'us-east-1', 'UseDualStack': False, 'UseFIPS': False}
+2026-06-01 09:42:28,026 [DEBUG] botocore.regions — Endpoint provider result: https://elasticloadbalancing.us-east-1.amazonaws.com
+2026-06-01 09:42:28,030 [DEBUG] botocore.hooks — Event before-call.elastic-load-balancing-v2.DescribeTargetGroups: calling handler <function add_recursion_detection_header at 0x7fb77fb95c60>
+2026-06-01 09:42:28,033 [DEBUG] botocore.hooks — Event before-call.elastic-load-balancing-v2.DescribeTargetGroups: calling handler <function inject_api_version_header_if_needed at 0x7fb77fbda5c0>
+2026-06-01 09:42:28,035 [DEBUG] botocore.endpoint — Making request for OperationModel(name=DescribeTargetGroups) with params: {'url_path': '/', 'query_string': '', 'method': 'POST', 'headers': {'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8', 'User-Agent': 'Boto3/1.39.7 md/Botocore#1.39.7 ua/2.1 os/linux#5.15.167.4-microsoft-standard-WSL2 md/arch#x86_64 lang/python#3.11.15 md/pyimpl#CPython m/Z,D,b cfg/retry-mode#legacy Botocore/1.39.7 x-client-framework:langchain-aws'}, 'body': {'Action': 'DescribeTargetGroups', 'Version': '2015-12-01', 'LoadBalancerArn': 'arn:aws:elasticloadbalancing:us-east-1:369606757523:loadbalancer/app/aiops-alb/55261edb7427e571'}, 'url': 'https://elasticloadbalancing.us-east-1.amazonaws.com/', 'context': {'client_region': 'us-east-1', 'client_config': <botocore.config.Config object at 0x7fb77e3d09d0>, 'has_streaming_input': False, 'auth_type': None, 'unsigned_payload': None, 'auth_options': ['aws.auth#sigv4']}}
+2026-06-01 09:42:28,039 [DEBUG] botocore.hooks — Event request-created.elastic-load-balancing-v2.DescribeTargetGroups: calling handler <bound method RequestSigner.handler of <botocore.signers.RequestSigner object at 0x7fb75c9fcd90>>
+2026-06-01 09:42:28,043 [DEBUG] botocore.hooks — Event choose-signer.elastic-load-balancing-v2.DescribeTargetGroups: calling handler <function set_operation_specific_signer at 0x7fb77fbd8860>
+2026-06-01 09:42:28,048 [DEBUG] botocore.hooks — Event choose-signer.elastic-load-balancing-v2.DescribeTargetGroups: calling handler <function _set_auth_scheme_preference_signer at 0x7fb77fbdb740>
+2026-06-01 09:42:28,053 [DEBUG] botocore.auth — Calculating signature using v4 auth.
+2026-06-01 09:42:28,058 [DEBUG] botocore.auth — CanonicalRequest:
+POST
+/
+
+content-type:application/x-www-form-urlencoded; charset=utf-8
+host:elasticloadbalancing.us-east-1.amazonaws.com
+x-amz-date:20260601T094228Z
+
+content-type;host;x-amz-date
+243dc68d6f3237c660cee4326c4ceade6f158fa6a3a3095e40e071264e23032b
+2026-06-01 09:42:28,062 [DEBUG] botocore.auth — StringToSign:
+AWS4-HMAC-SHA256
+20260601T094228Z
+20260601/us-east-1/elasticloadbalancing/aws4_request
+7b891300bc287cd6a9eea5c269efdbc131473b58b2816952853ab25030816142
+2026-06-01 09:42:28,065 [DEBUG] botocore.auth — Signature:
+efc019214dacf9b865076b977bac9fc10ba512bb0fffa048fdf83d57595fbf21
+2026-06-01 09:42:28,070 [DEBUG] botocore.hooks — Event request-created.elastic-load-balancing-v2.DescribeTargetGroups: calling handler <bound method UserAgentString.rebuild_and_replace_user_agent_handler of <botocore.useragent.UserAgentString object at 0x7fb75c9e6010>>
+2026-06-01 09:42:28,075 [DEBUG] botocore.hooks — Event request-created.elastic-load-balancing-v2.DescribeTargetGroups: calling handler <function add_retry_headers at 0x7fb77fbdae80>
+2026-06-01 09:42:28,081 [DEBUG] botocore.endpoint — Sending http request: <AWSPreparedRequest stream_output=False, method=POST, url=https://elasticloadbalancing.us-east-1.amazonaws.com/, headers={'Content-Type': b'application/x-www-form-urlencoded; charset=utf-8', 'User-Agent': b'Boto3/1.39.7 md/Botocore#1.39.7 ua/2.1 os/linux#5.15.167.4-microsoft-standard-WSL2 md/arch#x86_64 lang/python#3.11.15 md/pyimpl#CPython m/Z,D,b cfg/retry-mode#legacy Botocore/1.39.7 x-client-framework:langchain-aws', 'X-Amz-Date': b'20260601T094228Z', 'Authorization': b'AWS4-HMAC-SHA256 Credential=AKIAVMDSHRSJQUO7LL56/20260601/us-east-1/elasticloadbalancing/aws4_request, SignedHeaders=content-type;host;x-amz-date, Signature=efc019214dacf9b865076b977bac9fc10ba512bb0fffa048fdf83d57595fbf21', 'amz-sdk-invocation-id': b'5a3c74a1-fbab-41dd-95dd-981c55a92b4d', 'amz-sdk-request': b'attempt=1', 'Content-Length': '174'}>
+2026-06-01 09:42:28,084 [DEBUG] botocore.httpsession — Certificate path: /usr/local/lib/python3.11/site-packages/certifi/cacert.pem
+2026-06-01 09:42:28,410 [DEBUG] urllib3.connectionpool — https://elasticloadbalancing.us-east-1.amazonaws.com:443 "POST / HTTP/1.1" 200 1522
+2026-06-01 09:42:28,416 [DEBUG] botocore.parsers — Response headers: {'x-amzn-RequestId': '8236002e-3f3d-4c76-aa2c-a4c62de9c27b', 'Content-Type': 'text/xml', 'Content-Length': '1522', 'Date': 'Mon, 01 Jun 2026 09:42:28 GMT'}
+2026-06-01 09:42:28,420 [DEBUG] botocore.parsers — Response body:
+b'<DescribeTargetGroupsResponse xmlns="http://elasticloadbalancing.amazonaws.com/doc/2015-12-01/">\n  <DescribeTargetGroupsResult>\n    <TargetGroups>\n      <member>\n        <HealthCheckEnabled>true</HealthCheckEnabled>\n        <HealthCheckTimeoutSeconds>5</HealthCheckTimeoutSeconds>\n        <TargetGroupArn>arn:aws:elasticloadbalancing:us-east-1:369606757523:targetgroup/aiops-target-group/73715f318e60517d</TargetGroupArn>\n        <HealthCheckPort>traffic-port</HealthCheckPort>\n        <TargetType>instance</TargetType>\n        <Matcher>\n          <HttpCode>200</HttpCode>\n        </Matcher>\n        <TargetGroupName>aiops-target-group</TargetGroupName>\n        <HealthCheckProtocol>HTTP</HealthCheckProtocol>\n        <IpAddressType>ipv4</IpAddressType>\n        <HealthCheckPath>/</HealthCheckPath>\n        <Protocol>HTTP</Protocol>\n        <Port>80</Port>\n        <HealthyThresholdCount>5</HealthyThresholdCount>\n        <HealthCheckIntervalSeconds>30</HealthCheckIntervalSeconds>\n        <VpcId>vpc-037a46b5ba2844dae</VpcId>\n        <ProtocolVersion>HTTP1</ProtocolVersion>\n        <LoadBalancerArns>\n          <member>arn:aws:elasticloadbalancing:us-east-1:369606757523:loadbalancer/app/aiops-alb/55261edb7427e571</member>\n        </LoadBalancerArns>\n        <UnhealthyThresholdCount>2</UnhealthyThresholdCount>\n      </member>\n    </TargetGroups>\n  </DescribeTargetGroupsResult>\n  <ResponseMetadata>\n    <RequestId>8236002e-3f3d-4c76-aa2c-a4c62de9c27b</RequestId>\n  </ResponseMetadata>\n</DescribeTargetGroupsResponse>\n'
+2026-06-01 09:42:28,426 [DEBUG] botocore.hooks — Event needs-retry.elastic-load-balancing-v2.DescribeTargetGroups: calling handler <botocore.retryhandler.RetryHandler object at 0x7fb77e85ae50>
+2026-06-01 09:42:28,430 [DEBUG] botocore.retryhandler — No retry needed.
+2026-06-01 09:42:28,434 [DEBUG] botocore.hooks — Event before-parameter-build.elastic-load-balancing-v2.DescribeTargetHealth: calling handler <function generate_idempotent_uuid at 0x7fb77fbd8ae0>
+2026-06-01 09:42:28,439 [DEBUG] botocore.hooks — Event before-parameter-build.elastic-load-balancing-v2.DescribeTargetHealth: calling handler <function _handle_request_validation_mode_member at 0x7fb77fbdb600>
+2026-06-01 09:42:28,442 [DEBUG] botocore.regions — Calling endpoint provider with parameters: {'Region': 'us-east-1', 'UseDualStack': False, 'UseFIPS': False}
+2026-06-01 09:42:28,446 [DEBUG] botocore.regions — Endpoint provider result: https://elasticloadbalancing.us-east-1.amazonaws.com
+2026-06-01 09:42:28,449 [DEBUG] botocore.hooks — Event before-call.elastic-load-balancing-v2.DescribeTargetHealth: calling handler <function add_recursion_detection_header at 0x7fb77fb95c60>
+2026-06-01 09:42:28,452 [DEBUG] botocore.hooks — Event before-call.elastic-load-balancing-v2.DescribeTargetHealth: calling handler <function inject_api_version_header_if_needed at 0x7fb77fbda5c0>
+2026-06-01 09:42:28,458 [DEBUG] botocore.endpoint — Making request for OperationModel(name=DescribeTargetHealth) with params: {'url_path': '/', 'query_string': '', 'method': 'POST', 'headers': {'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8', 'User-Agent': 'Boto3/1.39.7 md/Botocore#1.39.7 ua/2.1 os/linux#5.15.167.4-microsoft-standard-WSL2 md/arch#x86_64 lang/python#3.11.15 md/pyimpl#CPython m/Z,D,b cfg/retry-mode#legacy Botocore/1.39.7 x-client-framework:langchain-aws'}, 'body': {'Action': 'DescribeTargetHealth', 'Version': '2015-12-01', 'TargetGroupArn': 'arn:aws:elasticloadbalancing:us-east-1:369606757523:targetgroup/aiops-target-group/73715f318e60517d'}, 'url': 'https://elasticloadbalancing.us-east-1.amazonaws.com/', 'context': {'client_region': 'us-east-1', 'client_config': <botocore.config.Config object at 0x7fb77e3d09d0>, 'has_streaming_input': False, 'auth_type': None, 'unsigned_payload': None, 'auth_options': ['aws.auth#sigv4']}}
+2026-06-01 09:42:28,462 [DEBUG] botocore.hooks — Event request-created.elastic-load-balancing-v2.DescribeTargetHealth: calling handler <bound method RequestSigner.handler of <botocore.signers.RequestSigner object at 0x7fb75c9fcd90>>
+2026-06-01 09:42:28,465 [DEBUG] botocore.hooks — Event choose-signer.elastic-load-balancing-v2.DescribeTargetHealth: calling handler <function set_operation_specific_signer at 0x7fb77fbd8860>
+2026-06-01 09:42:28,467 [DEBUG] botocore.hooks — Event choose-signer.elastic-load-balancing-v2.DescribeTargetHealth: calling handler <function _set_auth_scheme_preference_signer at 0x7fb77fbdb740>
+2026-06-01 09:42:28,473 [DEBUG] botocore.auth — Calculating signature using v4 auth.
+2026-06-01 09:42:28,478 [DEBUG] botocore.auth — CanonicalRequest:
+POST
+/
+
+content-type:application/x-www-form-urlencoded; charset=utf-8
+host:elasticloadbalancing.us-east-1.amazonaws.com
+x-amz-date:20260601T094228Z
+
+content-type;host;x-amz-date
+526feb9cdac1b9aa88f7ad7e65f5692c8b09482fa4a252371100abd30b61b866
+2026-06-01 09:42:28,481 [DEBUG] botocore.auth — StringToSign:
+AWS4-HMAC-SHA256
+20260601T094228Z
+20260601/us-east-1/elasticloadbalancing/aws4_request
+8a3a2370bfc60feb25784969d4f644ab27e3ddafbbf5696d22c8811e80478408
+2026-06-01 09:42:28,483 [DEBUG] botocore.auth — Signature:
+f31db59fb8527b10d39c5ebbbf543480f8ade665de3e7289dedaec4f677355cc
+2026-06-01 09:42:28,490 [DEBUG] botocore.hooks — Event request-created.elastic-load-balancing-v2.DescribeTargetHealth: calling handler <bound method UserAgentString.rebuild_and_replace_user_agent_handler of <botocore.useragent.UserAgentString object at 0x7fb75c9e6010>>
+2026-06-01 09:42:28,495 [DEBUG] botocore.hooks — Event request-created.elastic-load-balancing-v2.DescribeTargetHealth: calling handler <function add_retry_headers at 0x7fb77fbdae80>
+2026-06-01 09:42:28,497 [DEBUG] botocore.endpoint — Sending http request: <AWSPreparedRequest stream_output=False, method=POST, url=https://elasticloadbalancing.us-east-1.amazonaws.com/, headers={'Content-Type': b'application/x-www-form-urlencoded; charset=utf-8', 'User-Agent': b'Boto3/1.39.7 md/Botocore#1.39.7 ua/2.1 os/linux#5.15.167.4-microsoft-standard-WSL2 md/arch#x86_64 lang/python#3.11.15 md/pyimpl#CPython m/Z,D,b cfg/retry-mode#legacy Botocore/1.39.7 x-client-framework:langchain-aws', 'X-Amz-Date': b'20260601T094228Z', 'Authorization': b'AWS4-HMAC-SHA256 Credential=AKIAVMDSHRSJQUO7LL56/20260601/us-east-1/elasticloadbalancing/aws4_request, SignedHeaders=content-type;host;x-amz-date, Signature=f31db59fb8527b10d39c5ebbbf543480f8ade665de3e7289dedaec4f677355cc', 'amz-sdk-invocation-id': b'b1af5bca-6d5b-4b04-a7aa-b434cbdab7e4', 'amz-sdk-request': b'attempt=1', 'Content-Length': '175'}>
+2026-06-01 09:42:28,504 [DEBUG] botocore.httpsession — Certificate path: /usr/local/lib/python3.11/site-packages/certifi/cacert.pem
+2026-06-01 09:42:28,796 [DEBUG] urllib3.connectionpool — https://elasticloadbalancing.us-east-1.amazonaws.com:443 "POST / HTTP/1.1" 200 1364
+2026-06-01 09:42:28,799 [DEBUG] botocore.parsers — Response headers: {'x-amzn-RequestId': 'f435e642-53f5-4a17-9722-0bf778e4b3e7', 'Content-Type': 'text/xml', 'Content-Length': '1364', 'Date': 'Mon, 01 Jun 2026 09:42:29 GMT'}
+2026-06-01 09:42:28,802 [DEBUG] botocore.parsers — Response body:
+b'<DescribeTargetHealthResponse xmlns="http://elasticloadbalancing.amazonaws.com/doc/2015-12-01/">\n  <DescribeTargetHealthResult>\n    <TargetHealthDescriptions>\n      <member>\n        <HealthCheckPort>80</HealthCheckPort>\n        <TargetHealth>\n          <State>healthy</State>\n        </TargetHealth>\n        <AdministrativeOverride>\n          <Reason>AdministrativeOverride.NoOverride</Reason>\n          <Description>No override is currently active on target</Description>\n          <State>no_override</State>\n        </AdministrativeOverride>\n        <Target>\n          <Port>80</Port>\n          <Id>i-01cbe3e1e9e371033</Id>\n        </Target>\n      </member>\n      <member>\n        <HealthCheckPort>80</HealthCheckPort>\n        <TargetHealth>\n          <State>healthy</State>\n        </TargetHealth>\n        <AdministrativeOverride>\n          <Reason>AdministrativeOverride.NoOverride</Reason>\n          <Description>No override is currently active on target</Description>\n          <State>no_override</State>\n        </AdministrativeOverride>\n        <Target>\n          <Port>80</Port>\n          <Id>i-0d7409065a555843e</Id>\n        </Target>\n      </member>\n    </TargetHealthDescriptions>\n  </DescribeTargetHealthResult>\n  <ResponseMetadata>\n    <RequestId>f435e642-53f5-4a17-9722-0bf778e4b3e7</RequestId>\n  </ResponseMetadata>\n</DescribeTargetHealthResponse>\n'
+2026-06-01 09:42:28,808 [DEBUG] botocore.hooks — Event needs-retry.elastic-load-balancing-v2.DescribeTargetHealth: calling handler <botocore.retryhandler.RetryHandler object at 0x7fb77e85ae50>
+2026-06-01 09:42:28,810 [DEBUG] botocore.retryhandler — No retry needed.
+2026-06-01 09:42:28,812 [INFO] app.processor.dependency_resolver — [ALB resolver] Found target i-01cbe3e1e9e371033 state=healthy reason=None
+2026-06-01 09:42:28,814 [INFO] app.processor.dependency_resolver — [ALB resolver] Found target i-0d7409065a555843e state=healthy reason=None
+2026-06-01 09:42:28,819 [INFO] app.processor.dependency_resolver — [ALB resolver] Total targets for ALB: 2
+2026-06-01 09:42:28,826 [INFO] app.processor.dependency_resolver — [DependencyResolver] Resolved 1 dep(s) → 2 unique EC2 target(s): ['i-01cbe3e1e9e371033', 'i-0d7409065a555843e']
+2026-06-01 09:42:28,830 [INFO] app.processor.process_incident — [PreTriage] No short-circuit — full investigation
+2026-06-01 09:42:28,834 [INFO] app.processor.process_incident — [PreSignals] No primary root cause extracted pre-LLM
+2026-06-01 09:50:01,927 [INFO] app.main — Shutting down worker...
+2026-06-01 09:52:15,324 [INFO] app.main — Starting incident processor worker...
+2026-06-01 09:52:15,326 [INFO] app.processor.worker — [Worker] Incident processor worker started.
+2026-06-01 09:52:22,426 [INFO] app.queue.manager — [Queue] Enqueued incident_id=d0a06080-4a80-47ec-9c1b-ce7f58398613 | queue_size=1
+2026-06-01 09:52:22,429 [INFO] app.api.routes.queue — [/queue/enqueue] incident_id=d0a06080-4a80-47ec-9c1b-ce7f58398613 accepted
+2026-06-01 09:52:22,436 [INFO] app.processor.worker — [Worker] Picked up incident_id=d0a06080-4a80-47ec-9c1b-ce7f58398613
+2026-06-01 09:52:22,443 [INFO] app.processor.process_incident — 
+
+
+
+
+
+
+
+
+
+============================================================
+2026-06-01 09:52:22,446 [INFO] app.processor.process_incident — INCIDENT PROCESSOR v3 STARTED
+2026-06-01 09:52:22,454 [INFO] app.processor.process_incident — ============================================================
+2026-06-01 09:52:28,582 [INFO] app.processor.process_incident — [Load] incident=d0a06080-4a80-47ec-9c1b-ce7f58398613 | project='AIOps Test' tag=aiops-testing | region=us-east-1
+2026-06-01 09:52:30,945 [INFO] app.utils.aws_connector — [AWSClientFactory] Loaded credentials for project 'aiops-testing' region=us-east-1
+2026-06-01 09:52:30,949 [INFO] app.processor.process_incident — [Tools] Initialised for d0a06080-4a80-47ec-9c1b-ce7f58398613
+2026-06-01 09:52:30,954 [INFO] app.processor.process_incident — [Status] d0a06080-4a80-47ec-9c1b-ce7f58398613 → triage_started (10%)
+2026-06-01 09:52:35,402 [INFO] app.processor.dependency_resolver — [ALB resolver] Matched DNS 'aiops-alb-1937945577.us-east-1.elb.amazonaws.com' → ARN 'arn:aws:elasticloadbalancing:us-east-1:369606757523:loadbalancer/app/aiops-alb/55261edb7427e571'
+2026-06-01 09:52:35,938 [INFO] app.processor.dependency_resolver — [ALB resolver] Found target i-01cbe3e1e9e371033 state=healthy reason=None
+2026-06-01 09:52:35,945 [INFO] app.processor.dependency_resolver — [ALB resolver] Found target i-0d7409065a555843e state=healthy reason=None
+2026-06-01 09:52:35,950 [INFO] app.processor.dependency_resolver — [ALB resolver] Total targets for ALB: 2
+2026-06-01 09:52:35,958 [INFO] app.processor.dependency_resolver — [DependencyResolver] Resolved 1 dep(s) → 2 unique EC2 target(s): ['i-01cbe3e1e9e371033', 'i-0d7409065a555843e']
+2026-06-01 09:52:35,964 [INFO] app.processor.process_incident — [PreTriage] No short-circuit — full investigation
+2026-06-01 09:52:35,970 [INFO] app.processor.process_incident — [PreSignals] No primary root cause extracted pre-LLM
+2026-06-01 09:52:38,121 [INFO] app.processor.process_incident — [Status] d0a06080-4a80-47ec-9c1b-ce7f58398613 → infra_analysis (30%)
+2026-06-01 09:52:40,513 [INFO] app.agent.graph — [Agent] Starting investigation for incident d0a06080-4a80-47ec-9c1b-ce7f58398613
+2026-06-01 09:52:42,902 [INFO] app.utils.aws_connector — [BedrockClientFactory] Loaded Bedrock credentials region=ap-south-1
+2026-06-01 09:52:45,012 [INFO] app.agent.graph — [Agent] Invoking LLM with 2 messages
+2026-06-01 09:52:45,016 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
+2026-06-01 09:52:46,474 [INFO] app.agent.graph — [Agent] turn complete | tool_calls=1
+2026-06-01 09:52:46,478 [INFO] app.agent.graph — [Agent] LLM requested tool calls: [{"name": "get_ec2_analysis", "args": {"instance_ids": ["i-01cbe3e1e9e371033", "i-0d7409065a555843e"], "region": "us-east-1"}, "id": "toolu_bdrk_01MN9H737Nnij2TRoDaNMdt6", "type": "tool_call"}]
+2026-06-01 09:52:46,484 [INFO] app.agent.graph — [ToolNode] get_ec2_analysis | args={"instance_ids": ["i-01cbe3e1e9e371033", "i-0d7409065a555843e"], "region": "us-east-1"}
+2026-06-01 09:52:46,490 [INFO] app.processor.process_incident — [Status] d0a06080-4a80-47ec-9c1b-ce7f58398613 → infra_analysis (30%)
+2026-06-01 09:52:55,926 [INFO] app.agent.graph — [ToolNode] get_ec2_analysis result: {"instances": {"i-01cbe3e1e9e371033": {"details": {"instance_id": "i-01cbe3e1e9e371033", "instance_type": "t3.micro", "state": "running", "private_ip": "172.31.22.201", "public_ip": "44.223.28.47", "availability_zone": "us-east-1c", "subnet_id": "subnet-0fc229524f637ed10", "vpc_id": "vpc-037a46b5ba2844dae", "launch_time": "2026-06-01 04:44:53+00:00", "ami_id": "ami-091138d0f0d41ff90", "security_groups": [{"id": "sg-02dc2192e316318b4", "name": "launch-wizard-10"}], "tags": {"Created_by": "suresh", "Name": "aiops-test-1", "Project": "Aiops", "Created_for": "testing"}}, "status_checks": {"instance_status": "ok", "system_status": "ok"}, "metrics": {"cpu_percent": 0.7044983934952436, "network_in_bytes": 1864.0, "network_out_bytes": 2156.0, "disk_read_ops": null, "disk_write_ops": null, "status_check_failed": 0.0, "window_minutes": 15}}, "i-0d7409065a555843e": {"details": {"instance_id": "i-0d7409065a555843e", "instance_type": "t3.micro", "state": "running", "private_ip": "172.31.3.63", "public_ip": "44.204.212.38", "availability_zone": "us-east-1a", "subnet_id": "subnet-06c67918dbc079ad3", "vpc_id": "vpc-037a46b5ba2844dae", "launch_time": "2026-06-01 04:44:53+00:00", "ami_id": "ami-091138d0f0d41ff90", "security_groups": [{"id": "sg-04f1675ba6b3bff6e", "name": "launch-wizard-12"}], "tags": {"Created_by": "suresh", "Name": "aiops-test-2", "Created_for": "aiops-test", "Project": "meyiconnect-Aiops"}}, "status_checks": {"instance_status": "ok", "system_status": "ok"}, "metrics": {"cpu_percent": 0.9497697044150529, "network_in_bytes": 1900.6666666666667, "network_out_bytes": 2205.3333333333335, "disk_read_ops": null, "disk_write_ops": null, "status_check_failed": 0.0, "window_minutes": 15}}}, "findings": [{"category": "compute", "message": "EC2 instance i-01cbe3e1e9e371033 state is running"}, {"category": "compute", "message": "EC2 instance i-0d7409065a555843e state is running"}]}...
+2026-06-01 09:52:55,931 [INFO] app.agent.graph — [ToolNode] get_ec2_analysis full result sent to LLM: {"instances": {"i-01cbe3e1e9e371033": {"details": {"instance_id": "i-01cbe3e1e9e371033", "instance_type": "t3.micro", "state": "running", "private_ip": "172.31.22.201", "public_ip": "44.223.28.47", "availability_zone": "us-east-1c", "subnet_id": "subnet-0fc229524f637ed10", "vpc_id": "vpc-037a46b5ba2844dae", "launch_time": "2026-06-01 04:44:53+00:00", "ami_id": "ami-091138d0f0d41ff90", "security_groups": [{"id": "sg-02dc2192e316318b4", "name": "launch-wizard-10"}], "tags": {"Created_by": "suresh", "Name": "aiops-test-1", "Project": "Aiops", "Created_for": "testing"}}, "status_checks": {"instance_status": "ok", "system_status": "ok"}, "metrics": {"cpu_percent": 0.7044983934952436, "network_in_bytes": 1864.0, "network_out_bytes": 2156.0, "disk_read_ops": null, "disk_write_ops": null, "status_check_failed": 0.0, "window_minutes": 15}}, "i-0d7409065a555843e": {"details": {"instance_id": "i-0d7409065a555843e", "instance_type": "t3.micro", "state": "running", "private_ip": "172.31.3.63", "public_ip": "44.204.212.38", "availability_zone": "us-east-1a", "subnet_id": "subnet-06c67918dbc079ad3", "vpc_id": "vpc-037a46b5ba2844dae", "launch_time": "2026-06-01 04:44:53+00:00", "ami_id": "ami-091138d0f0d41ff90", "security_groups": [{"id": "sg-04f1675ba6b3bff6e", "name": "launch-wizard-12"}], "tags": {"Created_by": "suresh", "Name": "aiops-test-2", "Created_for": "aiops-test", "Project": "meyiconnect-Aiops"}}, "status_checks": {"instance_status": "ok", "system_status": "ok"}, "metrics": {"cpu_percent": 0.9497697044150529, "network_in_bytes": 1900.6666666666667, "network_out_bytes": 2205.3333333333335, "disk_read_ops": null, "disk_write_ops": null, "status_check_failed": 0.0, "window_minutes": 15}}}, "findings": [{"category": "compute", "message": "EC2 instance i-01cbe3e1e9e371033 state is running"}, {"category": "compute", "message": "EC2 instance i-0d7409065a555843e state is running"}]}
+2026-06-01 09:52:55,943 [INFO] app.agent.graph — [Agent] Invoking LLM with 4 messages
+2026-06-01 09:52:55,958 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
+2026-06-01 09:52:57,691 [INFO] app.agent.graph — [Agent] turn complete | tool_calls=1
+2026-06-01 09:52:57,696 [INFO] app.agent.graph — [Agent] LLM returned content: The EC2 analysis shows that both instances are in a running state with healthy status checks. There are no obvious issues with the EC2 instances themselves.
+2026-06-01 09:52:57,701 [INFO] app.agent.graph — [Agent] LLM requested tool calls: [{"name": "get_compressed_logs", "args": {"log_groups": ["aiops-app-test-logs", "aiops-system-test-logs"], "region": "us-east-1"}, "id": "toolu_bdrk_01WdqF4LmcPPf5qX19AkKRUV", "type": "tool_call"}]
+2026-06-01 09:52:57,704 [INFO] app.agent.graph — [ToolNode] get_compressed_logs | args={"log_groups": ["aiops-app-test-logs", "aiops-system-test-logs"], "region": "us-east-1"}
+2026-06-01 09:52:57,706 [INFO] app.processor.process_incident — [Status] d0a06080-4a80-47ec-9c1b-ce7f58398613 → logs_analysis (60%)
+2026-06-01 09:53:01,554 [INFO] app.processor.log_processor — [Start] down_time=05:01:34 | window=-25min/+10min | groups=['aiops-app-test-logs', 'aiops-system-test-logs']
+2026-06-01 09:53:16,821 [INFO] app.processor.log_processor — [CW] aiops-app-test-logs: 14623 events in 2 page(s)
+2026-06-01 09:53:17,207 [INFO] app.processor.log_processor — [CW] aiops-system-test-logs: 6563 events in 3 page(s)
+2026-06-01 09:53:17,223 [INFO] app.processor.log_processor — [Phase-A] aiops-app-test-logs: 92/14623 error events [04:36 – 05:11]
+2026-06-01 09:53:17,401 [INFO] app.processor.log_processor — [Phase-A] aiops-system-test-logs: 31/6563 error events [04:36 – 05:11]
+2026-06-01 09:53:17,408 [INFO] app.processor.log_processor — [Phase-A] 123 total error events
+2026-06-01 09:53:17,411 [INFO] app.processor.log_processor — [Phase-B] Found sustained spike starting at 04:45:07 with 123 errors in 5m
+2026-06-01 09:53:17,414 [INFO] app.processor.log_processor — [Phase-B] First error: 04:45:07 in aiops-app-test-logs | true_start anchored → 04:40:07
+2026-06-01 09:53:17,416 [INFO] app.processor.log_processor — [Timeline Stages]
+  buildup: 04:40:07 → 04:45:07
+  failure: 04:45:07 → 05:01:34
+  impact: 05:01:34 → 05:11:34
+2026-06-01 09:53:18,408 [INFO] app.processor.log_processor — [CW] aiops-system-test-logs: 0 events in 1 page(s)
+2026-06-01 09:53:18,411 [INFO] app.processor.log_processor — [Phase-C] aiops-system-test-logs / buildup: 0 lines [04:40 – 04:45]
+2026-06-01 09:53:18,487 [INFO] app.processor.log_processor — [CW] aiops-app-test-logs: 191 events in 2 page(s)
+2026-06-01 09:53:18,489 [INFO] app.processor.log_processor — [Phase-C] aiops-app-test-logs / buildup: 191 lines [04:40 – 04:45]
+2026-06-01 09:53:19,543 [INFO] app.processor.log_processor — [CW] aiops-system-test-logs: 0 events in 1 page(s)
+2026-06-01 09:53:19,546 [INFO] app.processor.log_processor — [Phase-C] aiops-system-test-logs / impact: 0 lines [05:01 – 05:11]
+2026-06-01 09:53:20,372 [INFO] app.processor.log_processor — [CW] aiops-app-test-logs: 41 events in 3 page(s)
+2026-06-01 09:53:20,378 [INFO] app.processor.log_processor — [Phase-C] aiops-app-test-logs / impact: 41 lines [05:01 – 05:11]
+2026-06-01 09:53:28,339 [INFO] app.processor.log_processor — [CW] aiops-system-test-logs: 6563 events in 3 page(s)
+2026-06-01 09:53:28,342 [INFO] app.processor.log_processor — [Phase-C] aiops-system-test-logs / failure: 6563 lines [04:45 – 05:01]
+2026-06-01 09:53:39,645 [INFO] app.processor.log_processor — [CW] aiops-app-test-logs: 14623 events in 2 page(s)
+2026-06-01 09:53:39,658 [INFO] app.processor.log_processor — [Phase-C] aiops-app-test-logs / failure: 14623 lines [04:45 – 05:01]
+2026-06-01 09:53:39,976 [INFO] app.processor.log_processor — [Top Error Signals]
+  • [RARE-HIGH-SIGNAL] [EXCEPTION] Traceback (most recent call last):
+  File "/home/ubuntu/aiops-testcase/app.py", line 145, in get_incidents
     with get_db() as conn:
          ~~~~~~^^
   File "/usr/lib/python3.14/contextlib.py", line 141, in __enter__
     return next(self.gen)
-  File "/home/ubuntu/aiops-testcase/app.py", lin
-  • [x6] [GENERIC-ERROR] psycopg2.ProgrammingError: invalid dsn: missing "=" after "pstgresql://meyiconnect_test_aiops_user:9UqSVbvQMMPK7ANn5SpYQagT6HifUJys@dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com/meyiconnect_test_aiops" in connection info string
-  • [HTTP-500] 2026-05-29 07:14:23,047 INFO request_completed request_id=b1a57b18-6ea7-48e5-bd55-dc340b80832b status_code=500 duration_ms=1
-  • [HTTP-500] 2026-05-29 07:14:29,280 INFO request_completed request_id=64f32086-f8e5-4736-8a62-60c4458db871 status_code=500 duration_ms=1
-  • [HTTP-500] 2026-05-29 07:14:31,875 INFO request_completed request_id=17f04add-b5fa-42c6-a35e-fe9095e29010 status_code=500 duration_ms=1
-  • [HTTP-500] 2026-05-29 07:14:35,902 INFO request_completed request_id=5661c592-5745-45d5-a796-2af31b9eabb6 status_code=500 duration_ms=1
-  • [HTTP-500] 2026-05-29 07:14:47,429 INFO request_completed request_id=42bf7e6a-6f13-4591-a69b-7aad701630f0 status_code=500 duration_ms=3
-  • [HTTP-500] 2026-05-29 07:14:52,517 INFO request_completed request_id=88fb15ea-a932-4773-9f0a-64777ae01e22 status_code=500 duration_ms=1
-  • [HTTP-500] 2026-05-29 07:17:38,915 INFO request_completed request_id=2d6eae30-693c-473a-8a94-fee6b241bd19 status_code=500 duration_ms=2
-2026-05-29 13:03:17,990 [INFO] app.processor.log_processor — [Done] groups=3 stages=3 total_raw=543 top_errors=10
-2026-05-29 13:03:17,995 [INFO] app.agent.graph — [ToolNode] get_compressed_logs result: {"adaptive_window": {"before_minutes": 30, "after_minutes": 10}, "anchor": {"true_start": "2026-05-29T07:09:23.263000+00:00", "first_error_ts": "2026-05-29T07:14:23.263000+00:00", "first_error_msg": "2026-05-29 07:14:23,046 ERROR failed_to_fetch_incidents", "first_error_group": "alike-prod-backend-app-logs", "first_error_weight": 15}, "top_errors": ["[RARE-HIGH-SIGNAL] [EXCEPTION] Traceback (most recent call last):\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 149, in get_incidents\n    w
-2026-05-29 13:03:17,997 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
-2026-05-29 13:03:22,003 [INFO] app.agent.graph — [Agent] turn complete | tool_calls=0
-2026-05-29 13:03:22,007 [INFO] app.agent.graph — [Agent] ReAct loop done | incident=6554e9eb-2206-487a-a7c6-c4229356f496 | messages=9 | tool_calls=3
-2026-05-29 13:03:24,176 [INFO] app.utils.aws_connector — [BedrockClientFactory] Loaded Bedrock credentials region=ap-south-1
-2026-05-29 13:03:24,526 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
-2026-05-29 13:03:26,550 [INFO] app.agent.graph — [Agent] Complete | incident=6554e9eb-2206-487a-a7c6-c4229356f496 | structured=yes
-2026-05-29 13:03:26,564 [INFO] app.processor.process_incident — [Agent] Finished | tool_calls=3 | messages=9 | early_exit=False | structured=yes
-2026-05-29 13:03:26,569 [INFO] app.processor.process_incident — [Status] 6554e9eb-2206-487a-a7c6-c4229356f496 → remediation_generated (90%)
-2026-05-29 13:03:30,443 [INFO] app.processor.process_incident — [SaveRCA] Updated 1 row(s) for 6554e9eb-2206-487a-a7c6-c4229356f496
-2026-05-29 13:03:30,677 [INFO] app.processor.process_incident — ============================================================
-2026-05-29 13:03:30,679 [INFO] app.processor.process_incident — INCIDENT COMPLETED: 6554e9eb-2206-487a-a7c6-c4229356f496
-2026-05-29 13:03:30,687 [INFO] app.processor.process_incident — ============================================================
-2026-05-29 13:03:30,689 [INFO] app.processor.worker — [Worker] Completed incident_id=6554e9eb-2206-487a-a7c6-c4229356f496
-2026-05-30 05:00:32,809 [INFO] app.main — Shutting down worker...
-2026-05-30 05:00:53,307 [INFO] app.main — Starting incident processor worker...
-2026-05-30 05:00:53,308 [INFO] app.processor.worker — [Worker] Incident processor worker started.
-2026-05-30 05:08:13,221 [INFO] app.queue.manager — [Queue] Enqueued incident_id=6554e9eb-2206-487a-a7c6-c4229356f496 | queue_size=1
-2026-05-30 05:08:13,256 [INFO] app.api.routes.queue — [/queue/enqueue] incident_id=6554e9eb-2206-487a-a7c6-c4229356f496 accepted
-2026-05-30 05:08:13,295 [INFO] app.processor.worker — [Worker] Picked up incident_id=6554e9eb-2206-487a-a7c6-c4229356f496
-2026-05-30 05:08:13,362 [INFO] app.processor.process_incident — ============================================================
-2026-05-30 05:08:13,368 [INFO] app.processor.process_incident — INCIDENT PROCESSOR v3 STARTED
-2026-05-30 05:08:13,369 [INFO] app.processor.process_incident — ============================================================
-2026-05-30 05:08:22,780 [INFO] app.processor.process_incident — [Load] incident=6554e9eb-2206-487a-a7c6-c4229356f496 | project='AIOps Production' tag=aiops-prod | region=us-east-1
-2026-05-30 05:08:26,045 [INFO] app.utils.aws_connector — [AWSClientFactory] Loaded credentials for project 'aiops-prod' region=us-east-1
-2026-05-30 05:08:26,048 [INFO] app.processor.process_incident — [Tools] Initialised for 6554e9eb-2206-487a-a7c6-c4229356f496
-2026-05-30 05:08:26,050 [INFO] app.processor.process_incident — [Status] 6554e9eb-2206-487a-a7c6-c4229356f496 → triage_started (10%)
-2026-05-30 05:08:31,709 [INFO] app.processor.dependency_resolver — [ALB resolver] Matched DNS 'aiops-alb-1937945577.us-east-1.elb.amazonaws.com' → ARN 'arn:aws:elasticloadbalancing:us-east-1:369606757523:loadbalancer/app/aiops-alb/55261edb7427e571'
-2026-05-30 05:08:32,196 [INFO] app.processor.dependency_resolver — [ALB resolver] Found target i-01cbe3e1e9e371033 state=healthy reason=None
-2026-05-30 05:08:32,197 [INFO] app.processor.dependency_resolver — [ALB resolver] Found target i-0d7409065a555843e state=healthy reason=None
-2026-05-30 05:08:32,198 [INFO] app.processor.dependency_resolver — [ALB resolver] Total targets for ALB: 2
-2026-05-30 05:08:32,204 [INFO] app.processor.dependency_resolver — [DependencyResolver] Resolved 1 dep(s) → 2 unique EC2 target(s): ['i-01cbe3e1e9e371033', 'i-0d7409065a555843e']
-2026-05-30 05:08:32,206 [INFO] app.processor.process_incident — [PreTriage] No short-circuit — full investigation
-2026-05-30 05:08:32,208 [INFO] app.processor.process_incident — [PreSignals] No primary root cause extracted pre-LLM
-2026-05-30 05:08:35,510 [INFO] app.processor.process_incident — [Status] 6554e9eb-2206-487a-a7c6-c4229356f496 → infra_analysis (30%)
-2026-05-30 05:08:38,688 [INFO] app.agent.graph — [Agent] Starting investigation for incident 6554e9eb-2206-487a-a7c6-c4229356f496
-2026-05-30 05:08:40,873 [INFO] app.utils.aws_connector — [BedrockClientFactory] Loaded Bedrock credentials region=ap-south-1
-2026-05-30 05:08:41,102 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
-2026-05-30 05:08:42,481 [INFO] app.agent.graph — [Agent] turn complete | tool_calls=1
-2026-05-30 05:08:42,487 [INFO] app.agent.graph — [ToolNode] resolve_incident_targets | args={"dependencies": [{"type": "alb", "region": "us-east-1", "resource_id": "aiops-alb-1937945577.us-east-1.elb.amazonaws.com", "log_group_name": ["alike-prod-backend-app-logs", "alike-prod-backend-logs", "alike-prod-backend-system-logs"]}]}
-2026-05-30 05:08:43,676 [INFO] app.processor.dependency_resolver — [ALB resolver] Matched DNS 'aiops-alb-1937945577.us-east-1.elb.amazonaws.com' → ARN 'arn:aws:elasticloadbalancing:us-east-1:369606757523:loadbalancer/app/aiops-alb/55261edb7427e571'
-2026-05-30 05:08:44,180 [INFO] app.processor.dependency_resolver — [ALB resolver] Found target i-01cbe3e1e9e371033 state=healthy reason=None
-2026-05-30 05:08:44,183 [INFO] app.processor.dependency_resolver — [ALB resolver] Found target i-0d7409065a555843e state=healthy reason=None
-2026-05-30 05:08:44,184 [INFO] app.processor.dependency_resolver — [ALB resolver] Total targets for ALB: 2
-2026-05-30 05:08:44,189 [INFO] app.processor.dependency_resolver — [DependencyResolver] Resolved 1 dep(s) → 2 unique EC2 target(s): ['i-01cbe3e1e9e371033', 'i-0d7409065a555843e']
-2026-05-30 05:08:44,192 [INFO] app.agent.graph — [ToolNode] resolve_incident_targets result: {"targets": [{"instance_id": "i-01cbe3e1e9e371033", "region": "us-east-1", "log_groups": ["alike-prod-backend-app-logs", "alike-prod-backend-logs", "alike-prod-backend-system-logs"], "target_health": "healthy", "target_reason": ""}, {"instance_id": "i-0d7409065a555843e", "region": "us-east-1", "log_groups": ["alike-prod-backend-app-logs", "alike-prod-backend-logs", "alike-prod-backend-system-logs"], "target_health": "healthy", "target_reason": ""}], "alb_meta": {"alb_dns": "aiops-alb-1937945577.
-2026-05-30 05:08:44,199 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
-2026-05-30 05:08:45,665 [INFO] app.agent.graph — [Agent] turn complete | tool_calls=1
-2026-05-30 05:08:45,669 [INFO] app.agent.graph — [ToolNode] get_ec2_analysis | args={"instance_ids": ["i-01cbe3e1e9e371033", "i-0d7409065a555843e"], "region": "us-east-1"}
-2026-05-30 05:08:45,672 [INFO] app.processor.process_incident — [Status] 6554e9eb-2206-487a-a7c6-c4229356f496 → infra_analysis (30%)
-2026-05-30 05:08:54,850 [INFO] app.agent.graph — [ToolNode] get_ec2_analysis result: {"instances": {"i-01cbe3e1e9e371033": {"details": {"instance_id": "i-01cbe3e1e9e371033", "instance_type": "t3.micro", "state": "running", "private_ip": "172.31.22.201", "public_ip": "3.91.6.92", "availability_zone": "us-east-1c", "launch_time": "2026-05-30 05:04:41+00:00", "ami_id": "ami-091138d0f0d41ff90", "security_groups": [{"id": "sg-02dc2192e316318b4", "name": "launch-wizard-10"}], "tags": {"Created_by": "suresh", "Project": "Aiops", "Name": "Alike-prod-backend", "Created_for": "testing"}},
-2026-05-30 05:08:54,865 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
-2026-05-30 05:08:56,498 [INFO] app.agent.graph — [Agent] turn complete | tool_calls=1
-2026-05-30 05:08:56,501 [INFO] app.agent.graph — [ToolNode] get_compressed_logs | args={"log_groups": ["alike-prod-backend-app-logs", "alike-prod-backend-logs", "alike-prod-backend-system-logs"], "region": "us-east-1"}
-2026-05-30 05:08:56,504 [INFO] app.processor.process_incident — [Status] 6554e9eb-2206-487a-a7c6-c4229356f496 → logs_analysis (60%)
-2026-05-30 05:08:59,067 [INFO] app.processor.log_processor — [Start] down_time=05:06:28 | window=-30min/+10min | groups=['alike-prod-backend-app-logs', 'alike-prod-backend-logs', 'alike-prod-backend-system-logs']
-2026-05-30 05:09:00,133 [INFO] app.processor.log_processor — [CW] alike-prod-backend-logs: 0 events in 1 page(s)
-2026-05-30 05:09:00,137 [INFO] app.processor.log_processor — [Phase-A] alike-prod-backend-logs: 0/0 error events [04:36 – 05:16]
-2026-05-30 05:09:01,129 [INFO] app.processor.log_processor — [CW] alike-prod-backend-app-logs: 96 events in 3 page(s)
-2026-05-30 05:09:01,150 [INFO] app.processor.log_processor — [Phase-A] alike-prod-backend-app-logs: 25/96 error events [04:36 – 05:16]
-2026-05-30 05:09:04,302 [INFO] app.processor.log_processor — [CW] alike-prod-backend-system-logs: 2264 events in 3 page(s)
-2026-05-30 05:09:04,349 [INFO] app.processor.log_processor — [Phase-A] alike-prod-backend-system-logs: 8/2264 error events [04:36 – 05:16]
-2026-05-30 05:09:04,352 [INFO] app.processor.log_processor — [Phase-A] 33 total error events
-2026-05-30 05:09:04,352 [INFO] app.processor.log_processor — [Phase-B] Found sustained spike starting at 05:04:59 with 33 errors in 5m
-2026-05-30 05:09:04,353 [INFO] app.processor.log_processor — [Phase-B] First error: 05:04:59 in alike-prod-backend-system-logs | true_start anchored → 04:59:59
-2026-05-30 05:09:04,353 [INFO] app.processor.log_processor — [Timeline Stages]
-  buildup: 04:59:59 → 05:04:59
-  failure: 05:04:59 → 05:06:28
-  impact: 05:06:28 → 05:16:28
-2026-05-30 05:09:04,653 [INFO] app.processor.log_processor — [CW] alike-prod-backend-app-logs: 0 events in 1 page(s)
-2026-05-30 05:09:04,655 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-app-logs / buildup: 0 lines [04:59 – 05:04]
-2026-05-30 05:09:04,860 [INFO] app.processor.log_processor — [CW] alike-prod-backend-app-logs: 17 events in 2 page(s)
-2026-05-30 05:09:04,862 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-app-logs / failure: 17 lines [05:04 – 05:06]
-2026-05-30 05:09:05,440 [INFO] app.processor.log_processor — [CW] alike-prod-backend-app-logs: 83 events in 3 page(s)
-2026-05-30 05:09:05,441 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-app-logs / impact: 83 lines [05:06 – 05:16]
-2026-05-30 05:09:05,584 [INFO] app.processor.log_processor — [CW] alike-prod-backend-logs: 0 events in 1 page(s)
-2026-05-30 05:09:05,585 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-logs / failure: 0 lines [05:04 – 05:06]
-2026-05-30 05:09:05,594 [INFO] app.processor.log_processor — [CW] alike-prod-backend-logs: 0 events in 1 page(s)
-2026-05-30 05:09:05,598 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-logs / buildup: 0 lines [04:59 – 05:04]
-2026-05-30 05:09:05,608 [INFO] app.processor.log_processor — [CW] alike-prod-backend-logs: 0 events in 1 page(s)
-2026-05-30 05:09:05,609 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-logs / impact: 0 lines [05:06 – 05:16]
-2026-05-30 05:09:05,972 [INFO] app.processor.log_processor — [CW] alike-prod-backend-system-logs: 29 events in 3 page(s)
-2026-05-30 05:09:05,974 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-system-logs / impact: 29 lines [05:06 – 05:16]
-2026-05-30 05:09:06,217 [INFO] app.processor.log_processor — [CW] alike-prod-backend-system-logs: 139 events in 2 page(s)
-2026-05-30 05:09:06,219 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-system-logs / failure: 139 lines [05:04 – 05:06]
-2026-05-30 05:09:17,542 [INFO] app.processor.log_processor — [CW] alike-prod-backend-system-logs: 2116 events in 2 page(s)
-2026-05-30 05:09:17,546 [INFO] app.processor.log_processor — [Phase-C] alike-prod-backend-system-logs / buildup: 2116 lines [04:59 – 05:04]
-2026-05-30 05:09:17,597 [INFO] app.processor.log_processor — [Top Error Signals]
-  • [RARE-HIGH-SIGNAL] [CASCADE-SYMPTOM of postgres, mysql, redis, rabbitmq, mongodb, elasticsearch] [FATAL] 2026-05-30T05:04:56.231681+00:00 ip-172-31-3-63 kernel: Command line: BOOT_IMAGE=/vmlinuz-7.0.0-1004-aws root=PARTUUID=11cd87fd-6998-4910-a85d-04ba2b583906 ro console=tty1 console=ttyS0 nvme_core.io_timeout=4294967295 panic=-1
-  • [RARE-HIGH-SIGNAL] [CASCADE-SYMPTOM of postgres, mysql, redis, rabbitmq, mongodb, elasticsearch] [FATAL] 2026-05-30T05:04:56.231896+00:00 ip-172-31-3-63 kernel: Kernel command line: BOOT_IMAGE=/vmlinuz-7.0.0-1004-aws root=PARTUUID=11cd87fd-6998-4910-a85d-04ba2b583906 ro console=tty1 console=ttyS0 nvme_core.io_timeout=4294967295 panic=-1
-  • [RARE-HIGH-SIGNAL] [CASCADE-SYMPTOM of postgres, mysql, redis, rabbitmq, mongodb, elasticsearch] [FATAL] 2026-05-30T05:04:56.883523+00:00 ip-172-31-22-201 kernel: Command line: BOOT_IMAGE=/vmlinuz-7.0.0-1004-aws root=PARTUUID=11cd87fd-6998-4910-a85d-04ba2b583906 ro console=tty1 console=ttyS0 nvme_core.io_timeout=4294967295 panic=-1
-  • [RARE-HIGH-SIGNAL] [CASCADE-SYMPTOM of postgres, mysql, redis, rabbitmq, mongodb, elasticsearch] [FATAL] 2026-05-30T05:04:56.883769+00:00 ip-172-31-22-201 kernel: Kernel command line: BOOT_IMAGE=/vmlinuz-7.0.0-1004-aws root=PARTUUID=11cd87fd-6998-4910-a85d-04ba2b583906 ro console=tty1 console=ttyS0 nvme_core.io_timeout=4294967295 panic=-1
-  • [x6] [EXCEPTION] Traceback (most recent call last):
-  File "/home/ubuntu/aiops-testcase/app.py", line 192, in get_incident_details
-    with get_db() as conn:
-         ~~~~~~^^
-  File "/usr/lib/python3.14/contextlib.py", line 141, in __enter__
-    return next(self.gen)
-  File "/home/ubuntu/aiops-testcase/app.py", lin
-  • [x6] [GENERIC-ERROR] 2026-05-30 05:06:28,791 ERROR failed_to_fetch_incident_details
-  • [x6] [GENERIC-ERROR] psycopg2.ProgrammingError: invalid dsn: missing "=" after "pstgresql://meyiconnect_test_aiops_user:9UqSVbvQMMPK7ANn5SpYQagT6HifUJys@dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com/meyiconnect_test_aiops" in connection info string
-  • [UNAVAILABLE] 2026-05-30T05:04:56.231784+00:00 ip-172-31-3-63 kernel: On node 0, zone DMA: 1 pages in unavailable ranges
-  • [UNAVAILABLE] 2026-05-30T05:04:56.231785+00:00 ip-172-31-3-63 kernel: On node 0, zone DMA: 96 pages in unavailable ranges
-  • [UNAVAILABLE] 2026-05-30T05:04:56.231786+00:00 ip-172-31-3-63 kernel: On node 0, zone DMA32: 784 pages in unavailable ranges
-2026-05-30 05:09:17,600 [INFO] app.processor.log_processor — [Done] groups=3 stages=3 total_raw=2384 top_errors=10
-2026-05-30 05:09:17,606 [INFO] app.agent.graph — [ToolNode] get_compressed_logs result: {"adaptive_window": {"before_minutes": 30, "after_minutes": 10}, "anchor": {"true_start": "2026-05-30T04:59:59.164000+00:00", "first_error_ts": "2026-05-30T05:04:59.164000+00:00", "first_error_msg": "2026-05-30T05:04:58.924170+00:00 ip-172-31-3-63 snapd[632]: daemon.go:370: adjusting startup timeout by 45s (pessimistic estimate of 30s plus 5s per snap)", "first_error_group": "alike-prod-backend-system-logs", "first_error_weight": 25}, "top_errors": ["[RARE-HIGH-SIGNAL] [CASCADE-SYMPTOM of postgr
-2026-05-30 05:09:17,613 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
-2026-05-30 05:09:28,355 [INFO] app.agent.graph — [Agent] turn complete | tool_calls=0
-2026-05-30 05:09:28,357 [INFO] app.agent.graph — [Agent] ReAct loop done | incident=6554e9eb-2206-487a-a7c6-c4229356f496 | messages=9 | tool_calls=3
-2026-05-30 05:09:30,654 [INFO] app.utils.aws_connector — [BedrockClientFactory] Loaded Bedrock credentials region=ap-south-1
-2026-05-30 05:09:31,071 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
-2026-05-30 05:09:34,664 [INFO] app.agent.graph — [Agent] Complete | incident=6554e9eb-2206-487a-a7c6-c4229356f496 | structured=yes
-2026-05-30 05:09:34,672 [INFO] app.processor.process_incident — [Agent] Finished | tool_calls=3 | messages=9 | structured=yes
-2026-05-30 05:09:34,674 [INFO] app.processor.process_incident — [Status] 6554e9eb-2206-487a-a7c6-c4229356f496 → remediation_generated (90%)
-2026-05-30 05:09:38,993 [INFO] app.processor.process_incident — [SaveRCA] Updated 1 row(s) for 6554e9eb-2206-487a-a7c6-c4229356f496
-2026-05-30 05:09:39,273 [INFO] app.processor.process_incident — ============================================================
-2026-05-30 05:09:39,275 [INFO] app.processor.process_incident — INCIDENT COMPLETED: 6554e9eb-2206-487a-a7c6-c4229356f496
-2026-05-30 05:09:39,276 [INFO] app.processor.process_incident — ============================================================
-2026-05-30 05:09:39,280 [INFO] app.processor.worker — [Worker] Completed incident_id=6554e9eb-2206-487a-a7c6-c4229356f496
-2026-05-30 05:10:31,115 [INFO] app.main — Shutting down worker...
+  File "/home/ubuntu/aiops-testcase/app.py", line 44, i
+  • [RARE-HIGH-SIGNAL] [CASCADE-SYMPTOM of postgres, mysql, redis, rabbitmq, mongodb, elasticsearch] [EXCEPTION] Traceback (most recent call last):
+  File "/home/ubuntu/aiops-testcase/app.py", line 95, in health
+    conn = psycopg2.connect(
+        DB_URL,
+        connect_timeout=3
+    )
+  File "/home/ubuntu/aiops-testcase/venv/lib/python3.14/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn =
+  • [x4] [TIMEOUT] connection to server at "dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com" (18.205.164.157), port 5432 failed: Connection timed out
+	Is the server running on that host and accepting TCP/IP connections?
+  • [x2] [TIMEOUT] psycopg2.OperationalError: connection to server at "dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com" (35.174.144.149), port 5432 failed: Connection timed out
+	Is the server running on that host and accepting TCP/IP connections?
+  • [CASCADE-SYMPTOM of postgres, mysql, redis, rabbitmq, mongodb, elasticsearch] [x2] [TIMEOUT] connection to server at "dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com" (18.205.164.157), port 5432 failed: timeout expired
+  • [HTTP-500] 2026-05-30 09:57:27,599 INFO request_completed request_id=1379c231-ab58-46d4-9ebe-0ed9a73d1be0 status_code=500 duration_ms=403797
+  • [HTTP-500] 2026-05-30 13:21:08,500 INFO request_completed request_id=8d1e39ee-48d9-4618-9844-c2308551c93d status_code=200 duration_ms=1
+  • [HTTP-500] 2026-05-30 14:25:18,244 INFO request_completed request_id=5bc7982d-e90b-4824-bc3e-18bc6146264a status_code=500 duration_ms=9013
+  • [HTTP-500] 2026-05-30 14:25:29,500 INFO request_completed request_id=851a3054-74da-4826-b89a-f2d7b510b7fc status_code=404 duration_ms=0
+  • [HTTP-500] 2026-05-30 14:25:41,500 INFO request_started request_id=ffd768aa-ed15-44f2-8ff2-f3d6eac2b201 path=/adm/current/phpinfo.php
+2026-06-01 09:53:39,980 [INFO] app.processor.log_processor — [Done] groups=2 stages=3 total_raw=21418 top_errors=10
+2026-06-01 09:53:39,986 [INFO] app.agent.graph — [ToolNode] get_compressed_logs result: {"adaptive_window": {"before_minutes": 25, "after_minutes": 10}, "anchor": {"true_start": "2026-06-01T04:40:07.218000+00:00", "first_error_ts": "2026-06-01T04:45:07.218000+00:00", "first_error_msg": "2026-05-30 09:57:27,596 ERROR failed_to_fetch_incidents", "first_error_group": "aiops-app-test-logs", "first_error_weight": 15}, "top_errors": ["[RARE-HIGH-SIGNAL] [EXCEPTION] Traceback (most recent call last):\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 145, in get_incidents\n    with get_db() as conn:\n         ~~~~~~^^\n  File \"/usr/lib/python3.14/contextlib.py\", line 141, in __enter__\n    return next(self.gen)\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 44, i", "[RARE-HIGH-SIGNAL] [CASCADE-SYMPTOM of postgres, mysql, redis, rabbitmq, mongodb, elasticsearch] [EXCEPTION] Traceback (most recent call last):\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 95, in health\n    conn = psycopg2.connect(\n        DB_URL,\n        connect_timeout=3\n    )\n  File \"/home/ubuntu/aiops-testcase/venv/lib/python3.14/site-packages/psycopg2/__init__.py\", line 122, in connect\n    conn =", "[x4] [TIMEOUT] connection to server at \"dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com\" (18.205.164.157), port 5432 failed: Connection timed out\n\tIs the server running on that host and accepting TCP/IP connections?", "[x2] [TIMEOUT] psycopg2.OperationalError: connection to server at \"dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com\" (35.174.144.149), port 5432 failed: Connection timed out\n\tIs the server running on that host and accepting TCP/IP connections?", "[CASCADE-SYMPTOM of postgres, mysql, redis, rabbitmq, mongodb, elasticsearch] [x2] [TIMEOUT] connection to server at \"dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com\" (18.205.164.157), port 5432 failed: timeout expired", "[HTTP-500] 2026-05-30 09:57:27,599 INFO request_completed request_id=1379c231-ab58-46d4-9ebe-0ed9a73d1be0 status_code=500 duration_ms=403797", "[HTTP-500] 2026-05-30 13:21:08,500 INFO request_completed request_id=8d1e39ee-48d9-4618-9844-c2308551c93d status_code=200 duration_ms=1", "[HTTP-500] 2026-05-30 14:25:18,244 INFO request_completed request_id=5bc7982d-e90b-4824-bc3e-18bc6146264a status_code=500 duration_ms=9013"], "total_raw_lines": 21418, "group_summaries": {"aiops-app-test-logs": {"buildup": {"stage_label": "Pre-failure buildup", "window": "04:40 \u2013 04:45", "total_raw": 191, "error_count": 6, "warn_count": 0, "top_clusters": [{"level": "error", "count": 1, "weight_label": "exception", "is_rare": true, "cascade_suspect": false, "upstream_services": [], "sample": "Traceback (most recent call last):\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 145, in get_incidents\n    with get_db() as conn:\n         ~~~~~~^^\n  File \"/usr/lib/python3.14/contextlib.py\", line"}, {"level": "error", "count": 2, "weight_label": "timeout", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "connection to server at \"dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com\" (18.205.164.157), port 5432 failed: Connection timed out\n\tIs the server running on that host and accepting TCP/IP conn"}, {"level": "error", "count": 1, "weight_label": "http-500", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "2026-05-30 09:57:27,599 INFO request_completed request_id=1379c231-ab58-46d4-9ebe-0ed9a73d1be0 status_code=500 duration_ms=403797"}, {"level": "error", "count": 1, "weight_label": "timeout", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "psycopg2.OperationalError: connection to server at \"dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com\" (35.174.144.149), port 5432 failed: Connection timed out\n\tIs the server running on that hos"}, {"level": "error", "count": 1, "weight_label": "generic-error", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "2026-05-30 09:57:27,596 ERROR failed_to_fetch_incidents"}]}, "failure": {"stage_label": "Failure propagation", "window": "04:45 \u2013 05:01", "total_raw": 14623, "error_count": 92, "warn_count": 0, "top_clusters": [{"level": "error", "count": 1, "weight_label": "exception", "is_rare": true, "cascade_suspect": true, "upstream_services": ["postgres", "mysql", "redis", "rabbitmq", "mongodb", "elasticsearch"], "sample": "Traceback (most recent call last):\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 95, in health\n    conn = psycopg2.connect(\n        DB_URL,\n        connect_timeout=3\n    )\n  File \"/home/ubuntu/aio"}, {"level": "error", "count": 2, "weight_label": "exception", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "Traceback (most recent call last):\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 145, in get_incidents\n    with get_db() as conn:\n         ~~~~~~^^\n  File \"/usr/lib/python3.14/contextlib.py\", line"}, {"level": "error", "count": 4, "weight_label": "timeout", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "connection to server at \"dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com\" (18.205.164.157), port 5432 failed: Connection timed out\n\tIs the server running on that host and accepting TCP/IP conn"}, {"level": "error", "count": 2, "weight_label": "timeout", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "psycopg2.OperationalError: connection to server at \"dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com\" (35.174.144.149), port 5432 failed: Connection timed out\n\tIs the server running on that hos"}, {"level": "error", "count": 2, "weight_label": "timeout", "is_rare": false, "cascade_suspect": true, "upstream_services": ["postgres", "mysql", "redis", "rabbitmq", "mongodb", "elasticsearch"], "sample": "connection to server at \"dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com\" (18.205.164.157), port 5432 failed: timeout expired"}]}, "impact": {"stage_label": "Impact / recovery", "window": "05:01 \u2013 05:11", "total_raw": 41, "error_count": 0, "warn_count": 0, "top_clusters": []}}, "aiops-system-test-logs": {"buildup": {"stage_label": "Pre-failure buildup", "window": "04:40 \u2013 04:45", "total_raw": 0, "error_count": 0, "warn_count": 0, "top_clusters": []}, "failure": {"stage_label": "Failure propagation", "window": "04:45 \u2013 05:01", "total_raw": 6563, "error_count": 0, "warn_count": 0, "top_clusters": []}, "impact": {"stage_label": "Impact / recovery", "window": "05:01 \u2013 05:11", "total_raw": 0, "error_count": 0, "warn_count": 0, "top_clusters": []}}}}...
+2026-06-01 09:53:39,989 [INFO] app.agent.graph — [ToolNode] get_compressed_logs full result sent to LLM: {"adaptive_window": {"before_minutes": 25, "after_minutes": 10}, "anchor": {"true_start": "2026-06-01T04:40:07.218000+00:00", "first_error_ts": "2026-06-01T04:45:07.218000+00:00", "first_error_msg": "2026-05-30 09:57:27,596 ERROR failed_to_fetch_incidents", "first_error_group": "aiops-app-test-logs", "first_error_weight": 15}, "top_errors": ["[RARE-HIGH-SIGNAL] [EXCEPTION] Traceback (most recent call last):\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 145, in get_incidents\n    with get_db() as conn:\n         ~~~~~~^^\n  File \"/usr/lib/python3.14/contextlib.py\", line 141, in __enter__\n    return next(self.gen)\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 44, i", "[RARE-HIGH-SIGNAL] [CASCADE-SYMPTOM of postgres, mysql, redis, rabbitmq, mongodb, elasticsearch] [EXCEPTION] Traceback (most recent call last):\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 95, in health\n    conn = psycopg2.connect(\n        DB_URL,\n        connect_timeout=3\n    )\n  File \"/home/ubuntu/aiops-testcase/venv/lib/python3.14/site-packages/psycopg2/__init__.py\", line 122, in connect\n    conn =", "[x4] [TIMEOUT] connection to server at \"dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com\" (18.205.164.157), port 5432 failed: Connection timed out\n\tIs the server running on that host and accepting TCP/IP connections?", "[x2] [TIMEOUT] psycopg2.OperationalError: connection to server at \"dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com\" (35.174.144.149), port 5432 failed: Connection timed out\n\tIs the server running on that host and accepting TCP/IP connections?", "[CASCADE-SYMPTOM of postgres, mysql, redis, rabbitmq, mongodb, elasticsearch] [x2] [TIMEOUT] connection to server at \"dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com\" (18.205.164.157), port 5432 failed: timeout expired", "[HTTP-500] 2026-05-30 09:57:27,599 INFO request_completed request_id=1379c231-ab58-46d4-9ebe-0ed9a73d1be0 status_code=500 duration_ms=403797", "[HTTP-500] 2026-05-30 13:21:08,500 INFO request_completed request_id=8d1e39ee-48d9-4618-9844-c2308551c93d status_code=200 duration_ms=1", "[HTTP-500] 2026-05-30 14:25:18,244 INFO request_completed request_id=5bc7982d-e90b-4824-bc3e-18bc6146264a status_code=500 duration_ms=9013"], "total_raw_lines": 21418, "group_summaries": {"aiops-app-test-logs": {"buildup": {"stage_label": "Pre-failure buildup", "window": "04:40 \u2013 04:45", "total_raw": 191, "error_count": 6, "warn_count": 0, "top_clusters": [{"level": "error", "count": 1, "weight_label": "exception", "is_rare": true, "cascade_suspect": false, "upstream_services": [], "sample": "Traceback (most recent call last):\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 145, in get_incidents\n    with get_db() as conn:\n         ~~~~~~^^\n  File \"/usr/lib/python3.14/contextlib.py\", line"}, {"level": "error", "count": 2, "weight_label": "timeout", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "connection to server at \"dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com\" (18.205.164.157), port 5432 failed: Connection timed out\n\tIs the server running on that host and accepting TCP/IP conn"}, {"level": "error", "count": 1, "weight_label": "http-500", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "2026-05-30 09:57:27,599 INFO request_completed request_id=1379c231-ab58-46d4-9ebe-0ed9a73d1be0 status_code=500 duration_ms=403797"}, {"level": "error", "count": 1, "weight_label": "timeout", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "psycopg2.OperationalError: connection to server at \"dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com\" (35.174.144.149), port 5432 failed: Connection timed out\n\tIs the server running on that hos"}, {"level": "error", "count": 1, "weight_label": "generic-error", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "2026-05-30 09:57:27,596 ERROR failed_to_fetch_incidents"}]}, "failure": {"stage_label": "Failure propagation", "window": "04:45 \u2013 05:01", "total_raw": 14623, "error_count": 92, "warn_count": 0, "top_clusters": [{"level": "error", "count": 1, "weight_label": "exception", "is_rare": true, "cascade_suspect": true, "upstream_services": ["postgres", "mysql", "redis", "rabbitmq", "mongodb", "elasticsearch"], "sample": "Traceback (most recent call last):\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 95, in health\n    conn = psycopg2.connect(\n        DB_URL,\n        connect_timeout=3\n    )\n  File \"/home/ubuntu/aio"}, {"level": "error", "count": 2, "weight_label": "exception", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "Traceback (most recent call last):\n  File \"/home/ubuntu/aiops-testcase/app.py\", line 145, in get_incidents\n    with get_db() as conn:\n         ~~~~~~^^\n  File \"/usr/lib/python3.14/contextlib.py\", line"}, {"level": "error", "count": 4, "weight_label": "timeout", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "connection to server at \"dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com\" (18.205.164.157), port 5432 failed: Connection timed out\n\tIs the server running on that host and accepting TCP/IP conn"}, {"level": "error", "count": 2, "weight_label": "timeout", "is_rare": false, "cascade_suspect": false, "upstream_services": [], "sample": "psycopg2.OperationalError: connection to server at \"dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com\" (35.174.144.149), port 5432 failed: Connection timed out\n\tIs the server running on that hos"}, {"level": "error", "count": 2, "weight_label": "timeout", "is_rare": false, "cascade_suspect": true, "upstream_services": ["postgres", "mysql", "redis", "rabbitmq", "mongodb", "elasticsearch"], "sample": "connection to server at \"dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com\" (18.205.164.157), port 5432 failed: timeout expired"}]}, "impact": {"stage_label": "Impact / recovery", "window": "05:01 \u2013 05:11", "total_raw": 41, "error_count": 0, "warn_count": 0, "top_clusters": []}}, "aiops-system-test-logs": {"buildup": {"stage_label": "Pre-failure buildup", "window": "04:40 \u2013 04:45", "total_raw": 0, "error_count": 0, "warn_count": 0, "top_clusters": []}, "failure": {"stage_label": "Failure propagation", "window": "04:45 \u2013 05:01", "total_raw": 6563, "error_count": 0, "warn_count": 0, "top_clusters": []}, "impact": {"stage_label": "Impact / recovery", "window": "05:01 \u2013 05:11", "total_raw": 0, "error_count": 0, "warn_count": 0, "top_clusters": []}}}}
+2026-06-01 09:53:39,997 [INFO] app.agent.graph — [Agent] Invoking LLM with 6 messages
+2026-06-01 09:53:40,003 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
+2026-06-01 09:53:44,807 [INFO] app.agent.graph — [Agent] turn complete | tool_calls=1
+2026-06-01 09:53:44,811 [INFO] app.agent.graph — [Agent] LLM returned content: The log analysis shows that the application is experiencing connection timeouts when trying to connect to a PostgreSQL database hosted on "dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com". This is a clear Tier 3 symptom that requires further investigation into the network path.
+2026-06-01 09:53:44,816 [INFO] app.agent.graph — [Agent] LLM requested tool calls: [{"name": "investigate_network_path", "args": {"source_instance_id": "i-01cbe3e1e9e371033", "destination_host": "dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com", "destination_port": 5432, "region": "us-east-1"}, "id": "toolu_bdrk_017pumrUEmKvpxXAkqnvEoU6", "type": "tool_call"}]
+2026-06-01 09:53:44,822 [INFO] app.agent.graph — [ToolNode] investigate_network_path | args={"source_instance_id": "i-01cbe3e1e9e371033", "destination_host": "dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com", "destination_port": 5432, "region": "us-east-1"}
+2026-06-01 09:53:44,829 [INFO] app.processor.process_incident — [Status] d0a06080-4a80-47ec-9c1b-ce7f58398613 → infra_analysis (30%)
+2026-06-01 09:53:50,092 [INFO] app.agent.graph — [ToolNode] investigate_network_path result: {"dns_resolution": "UNKNOWN", "route_table": "PASS", "nacl_outbound": "PASS", "nacl_inbound": "PASS", "security_group_outbound": "FAIL", "blocked_layer": "security_group", "blocked_port": 5432, "security_group_details": {"security_groups": [{"group_id": "sg-02dc2192e316318b4", "group_name": "launch-wizard-10", "outbound_rules": [{"port_range": "80-80", "protocol": "tcp", "allows_destination_port": false}]}]}, "nacl_details": {"nacls": [{"nacl_id": "acl-0b70bfbd62cfa0cb4", "outbound_allows_port": true, "inbound_allows_ephemeral": true, "outbound_rule_count": 2, "inbound_rule_count": 2}]}, "route_table_details": {"route_tables": [{"route_table_id": "rtb-0c363dd3d96b17366", "routes": [{"destination": "172.31.0.0/16", "gateway": "local", "state": "active", "is_default": false}, {"destination": "0.0.0.0/0", "gateway": "igw-0c16907ef18ca4e68", "state": "active", "is_default": true}]}]}, "summary": "BLOCKED: Security group outbound rule does not allow TCP port 5432. Instance cannot reach dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com:5432. Check outbound rules on: sg-02dc2192e316318b4", "findings": [{"category": "network", "message": "Route table validation passed"}, {"category": "network", "message": "NACL validation passed"}, {"category": "network", "message": "Security group blocks outbound 5432"}]}...
+2026-06-01 09:53:50,095 [INFO] app.agent.graph — [ToolNode] investigate_network_path full result sent to LLM: {"dns_resolution": "UNKNOWN", "route_table": "PASS", "nacl_outbound": "PASS", "nacl_inbound": "PASS", "security_group_outbound": "FAIL", "blocked_layer": "security_group", "blocked_port": 5432, "security_group_details": {"security_groups": [{"group_id": "sg-02dc2192e316318b4", "group_name": "launch-wizard-10", "outbound_rules": [{"port_range": "80-80", "protocol": "tcp", "allows_destination_port": false}]}]}, "nacl_details": {"nacls": [{"nacl_id": "acl-0b70bfbd62cfa0cb4", "outbound_allows_port": true, "inbound_allows_ephemeral": true, "outbound_rule_count": 2, "inbound_rule_count": 2}]}, "route_table_details": {"route_tables": [{"route_table_id": "rtb-0c363dd3d96b17366", "routes": [{"destination": "172.31.0.0/16", "gateway": "local", "state": "active", "is_default": false}, {"destination": "0.0.0.0/0", "gateway": "igw-0c16907ef18ca4e68", "state": "active", "is_default": true}]}]}, "summary": "BLOCKED: Security group outbound rule does not allow TCP port 5432. Instance cannot reach dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com:5432. Check outbound rules on: sg-02dc2192e316318b4", "findings": [{"category": "network", "message": "Route table validation passed"}, {"category": "network", "message": "NACL validation passed"}, {"category": "network", "message": "Security group blocks outbound 5432"}]}
+2026-06-01 09:53:50,100 [INFO] app.agent.graph — [Agent] Invoking LLM with 8 messages
+2026-06-01 09:53:50,108 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
+2026-06-01 09:53:52,198 [INFO] app.agent.graph — [Agent] turn complete | tool_calls=1
+2026-06-01 09:53:52,205 [INFO] app.agent.graph — [Agent] LLM returned content: The network path investigation shows that the issue is with the security group outbound rules. The security group "sg-02dc2192e316318b4" does not have an outbound rule allowing TCP port 5432, which is required for the application to connect to the PostgreSQL database.
+2026-06-01 09:53:52,210 [INFO] app.agent.graph — [Agent] LLM requested tool calls: [{"name": "get_security_group_rules", "args": {"security_group_ids": ["sg-02dc2192e316318b4"], "region": "us-east-1"}, "id": "toolu_bdrk_01FvMAvgjiuqJLuq67MXFr4c", "type": "tool_call"}]
+2026-06-01 09:53:52,215 [INFO] app.agent.graph — [ToolNode] get_security_group_rules | args={"security_group_ids": ["sg-02dc2192e316318b4"], "region": "us-east-1"}
+2026-06-01 09:53:53,682 [INFO] app.agent.graph — [ToolNode] get_security_group_rules result: {"security_groups": [{"group_id": "sg-02dc2192e316318b4", "group_name": "launch-wizard-10", "vpc_id": "vpc-037a46b5ba2844dae", "inbound_rules": [{"protocol": "tcp", "port_range": "80-80", "sources": ["0.0.0.0/0", "sg-037292134be360dd5"]}, {"protocol": "tcp", "port_range": "22-22", "sources": ["0.0.0.0/0"]}], "outbound_rules": [{"protocol": "tcp", "port_range": "80-80", "destinations": ["0.0.0.0/0"]}], "inbound_count": 2, "outbound_count": 1}]}...
+2026-06-01 09:53:53,689 [INFO] app.agent.graph — [ToolNode] get_security_group_rules full result sent to LLM: {"security_groups": [{"group_id": "sg-02dc2192e316318b4", "group_name": "launch-wizard-10", "vpc_id": "vpc-037a46b5ba2844dae", "inbound_rules": [{"protocol": "tcp", "port_range": "80-80", "sources": ["0.0.0.0/0", "sg-037292134be360dd5"]}, {"protocol": "tcp", "port_range": "22-22", "sources": ["0.0.0.0/0"]}], "outbound_rules": [{"protocol": "tcp", "port_range": "80-80", "destinations": ["0.0.0.0/0"]}], "inbound_count": 2, "outbound_count": 1}]}
+2026-06-01 09:53:53,698 [INFO] app.agent.graph — [Agent] Invoking LLM with 10 messages
+2026-06-01 09:53:53,705 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
+2026-06-01 09:53:55,431 [INFO] app.agent.graph — [Agent] turn complete | tool_calls=1
+2026-06-01 09:53:55,438 [INFO] app.agent.graph — [Agent] LLM returned content: The security group details confirm that there is no outbound rule allowing TCP port 5432, which is required for the application to connect to the PostgreSQL database.
+2026-06-01 09:53:55,445 [INFO] app.agent.graph — [Agent] LLM requested tool calls: [{"name": "check_cloudtrail_sg_changes", "args": {"security_group_id": "sg-02dc2192e316318b4", "lookback_minutes": 60, "region": "us-east-1"}, "id": "toolu_bdrk_015F33mwdS1pksPUKA8n6sk1", "type": "tool_call"}]
+2026-06-01 09:53:55,453 [INFO] app.agent.graph — [ToolNode] check_cloudtrail_sg_changes | args={"security_group_id": "sg-02dc2192e316318b4", "lookback_minutes": 60, "region": "us-east-1"}
+2026-06-01 09:53:55,456 [INFO] app.processor.process_incident — [Status] d0a06080-4a80-47ec-9c1b-ce7f58398613 → infra_analysis (30%)
+2026-06-01 09:53:58,999 [INFO] app.agent.graph — [ToolNode] check_cloudtrail_sg_changes result: {"changes_found": true, "change_count": 2, "changes": [{"event_name": "RevokeSecurityGroupEgress", "event_time": "2026-06-01T05:01:34+00:00", "user": "AWSReservedSSO_Meyi-Test-DevOps_a701c72ac6d9ae85", "minutes_before_incident": 0.0, "changed_rules": [{"protocol": "-1", "port_range": "ALL", "cidrs": ["0.0.0.0/0"]}], "source_ip": "162.216.141.19"}, {"event_name": "AuthorizeSecurityGroupEgress", "event_time": "2026-06-01T04:48:53+00:00", "user": "AWSReservedSSO_Meyi-Test-DevOps_a701c72ac6d9ae85", "minutes_before_incident": 12.7, "changed_rules": [{"protocol": "-1", "port_range": "ALL", "cidrs": ["0.0.0.0/0"]}], "source_ip": "103.140.50.219"}], "probable_cause": "Security group sg-02dc2192e316318b4 was modified by 'AWSReservedSSO_Meyi-Test-DevOps_a701c72ac6d9ae85' at 2026-06-01T04:48:53+00:00 (12.7 min before incident). Event: AuthorizeSecurityGroupEgress. Changed rules: [{\"protocol\": \"-1\", \"port_range\": \"ALL\", \"cidrs\": [\"0.0.0.0/0\"]}]", "findings": [{"category": "change_history", "message": "CloudTrail shows SG sg-02dc2192e316318b4 modified by AWSReservedSSO_Meyi-Test-DevOps_a701c72ac6d9ae85"}]}...
+2026-06-01 09:53:59,002 [INFO] app.agent.graph — [ToolNode] check_cloudtrail_sg_changes full result sent to LLM: {"changes_found": true, "change_count": 2, "changes": [{"event_name": "RevokeSecurityGroupEgress", "event_time": "2026-06-01T05:01:34+00:00", "user": "AWSReservedSSO_Meyi-Test-DevOps_a701c72ac6d9ae85", "minutes_before_incident": 0.0, "changed_rules": [{"protocol": "-1", "port_range": "ALL", "cidrs": ["0.0.0.0/0"]}], "source_ip": "162.216.141.19"}, {"event_name": "AuthorizeSecurityGroupEgress", "event_time": "2026-06-01T04:48:53+00:00", "user": "AWSReservedSSO_Meyi-Test-DevOps_a701c72ac6d9ae85", "minutes_before_incident": 12.7, "changed_rules": [{"protocol": "-1", "port_range": "ALL", "cidrs": ["0.0.0.0/0"]}], "source_ip": "103.140.50.219"}], "probable_cause": "Security group sg-02dc2192e316318b4 was modified by 'AWSReservedSSO_Meyi-Test-DevOps_a701c72ac6d9ae85' at 2026-06-01T04:48:53+00:00 (12.7 min before incident). Event: AuthorizeSecurityGroupEgress. Changed rules: [{\"protocol\": \"-1\", \"port_range\": \"ALL\", \"cidrs\": [\"0.0.0.0/0\"]}]", "findings": [{"category": "change_history", "message": "CloudTrail shows SG sg-02dc2192e316318b4 modified by AWSReservedSSO_Meyi-Test-DevOps_a701c72ac6d9ae85"}]}
+2026-06-01 09:53:59,006 [INFO] app.agent.graph — [Agent] Invoking LLM with 12 messages
+2026-06-01 09:53:59,015 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
+2026-06-01 09:54:04,827 [INFO] app.agent.graph — [Agent] turn complete | tool_calls=0
+2026-06-01 09:54:04,833 [INFO] app.agent.graph — [Agent] LLM returned content: The CloudTrail investigation shows that the security group "sg-02dc2192e316318b4" was modified by the user "AWSReservedSSO_Meyi-Test-DevOps_a701c72ac6d9ae85" 12.7 minutes before the incident started. The change was to revoke the outbound rule allowing all traffic, which caused the application to lose connectivity to the PostgreSQL database.
+
+```json
+{
+  "probable_root_cause": "Security group sg-02dc2192e316318b4 had its outbound rule allowing TCP port 5432 revoked by user 'AWSReservedSSO_Meyi-Test-DevOps_a701c72ac6d9ae85' 12.7 minutes before the incident, causing the application to lose connectivity to the PostgreSQL database.",
+  "confidence": 95,
+  "evidence": [
+    "Security group outbound rule does not allow TCP port 5432. Instance cannot reach dpg-d839timgvqtc73eo5dt0-a.virginia-postgres.render.com:5432.",
+    "CloudTrail shows the security group sg-02dc2192e316318b4 was modified by 'AWSReservedSSO_Meyi-Test-DevOps_a701c72ac6d9ae85' at 2026-06-01T04:48:53+00:00, 12.7 minutes before the incident, to revoke the outbound rule allowing all traffic."
+  ],
+  "dependency_impact": [
+    "The application was unable to connect to the PostgreSQL database, causing HTTP 504 Gateway Time-out errors to be returned to the testing client."
+  ],
+  "recommended_actions": [
+    "aws ec2 authorize-security-group-egress --group-id sg-02dc2192e316318b4 --protocol tcp --port 5432 --cidr 0.0.0.0/0",
+    "Confirm the ALB targets return 'healthy' within 60 seconds after the security group rule is updated.",
+    "Add a CloudWatch alarm to monitor for any future changes to security group sg-02dc2192e316318b4 via CloudTrail, to proactively detect and prevent similar incidents."
+  ]
+}
+```
+2026-06-01 09:54:04,842 [INFO] app.agent.graph — [Agent] ReAct loop done | incident=d0a06080-4a80-47ec-9c1b-ce7f58398613 | messages=13 | tool_calls=5
+2026-06-01 09:54:04,849 [INFO] app.agent.graph — [Extraction] Starting fresh extraction conversation
+2026-06-01 09:54:04,853 [INFO] app.agent.graph — [Extraction] Fresh message count=2
+2026-06-01 09:54:08,520 [INFO] app.utils.aws_connector — [BedrockClientFactory] Loaded Bedrock credentials region=ap-south-1
+2026-06-01 09:54:10,566 [INFO] langchain_aws.llms.bedrock — Using Bedrock Invoke API to generate response
+2026-06-01 09:54:14,278 [INFO] app.agent.graph — [Extraction] Structured output success
+2026-06-01 09:54:14,283 [INFO] app.agent.graph — [Agent] Complete | incident=d0a06080-4a80-47ec-9c1b-ce7f58398613 | structured=yes
+2026-06-01 09:54:14,291 [INFO] app.processor.process_incident — [Agent] Finished | tool_calls=5 | messages=13 | structured=yes
+2026-06-01 09:54:14,293 [INFO] app.processor.process_incident — [Status] d0a06080-4a80-47ec-9c1b-ce7f58398613 → remediation_generated (90%)
+2026-06-01 09:54:18,930 [INFO] app.processor.process_incident — [SaveRCA] Updated 1 row(s) for d0a06080-4a80-47ec-9c1b-ce7f58398613
+2026-06-01 09:54:19,185 [INFO] app.processor.process_incident — ============================================================
+2026-06-01 09:54:19,191 [INFO] app.processor.process_incident — INCIDENT COMPLETED: d0a06080-4a80-47ec-9c1b-ce7f58398613
+2026-06-01 09:54:19,197 [INFO] app.processor.process_incident — ============================================================
+2026-06-01 09:54:19,203 [INFO] app.processor.worker — [Worker] Completed incident_id=d0a06080-4a80-47ec-9c1b-ce7f58398613
+2026-06-01 10:07:04,358 [INFO] app.main — Shutting down worker...

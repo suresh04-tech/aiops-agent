@@ -43,9 +43,9 @@ from langgraph.graph.message import add_messages
 from typing_extensions import TypedDict
 
 from app.agent.prompts import SYSTEM_PROMPT
-from app.agent.tools import (
-    ALL_TOOLS,
-    WORKFLOW_STATES,
+from app.agent.tools import ALL_TOOLS
+from app.agent.rules import WORKFLOW_STATES
+from app.agent.evaluators import (
     correlate_timeline,
     extract_rca_signals,
     has_sufficient_evidence,
@@ -112,6 +112,11 @@ class AgentState(TypedDict):
     incident_id:     str
     tool_calls_made: list[str]
     rca_signals:     dict
+    resolved_targets: list[dict]
+    alb_meta:        dict
+    investigation_state: dict
+    evidence: list[str]
+    investigation_findings: list[dict]
 
 
 # ── LLM builders ─────────────────────────────────────────────────────────────
@@ -163,9 +168,16 @@ def safe_llm_invoke(llm, messages):
 # ── Node: agent (ReAct reasoning) ────────────────────────────────────────────
 
 def agent_node(state: AgentState, llm_with_tools) -> dict:
+    logger.info(f"[Agent] Invoking LLM with {len(state['messages'])} messages")
     response = safe_llm_invoke(llm_with_tools, state["messages"])
     tool_call_count = len(response.tool_calls) if hasattr(response, "tool_calls") else 0
     logger.info(f"[Agent] turn complete | tool_calls={tool_call_count}")
+    
+    if hasattr(response, "content") and response.content:
+        logger.info(f"[Agent] LLM returned content: {response.content}")
+    if tool_call_count > 0:
+        logger.info(f"[Agent] LLM requested tool calls: {json.dumps(response.tool_calls, default=str)}")
+        
     return {"messages": [response]}
 
 
@@ -180,48 +192,77 @@ def tool_node(state: AgentState) -> dict:
     incident_id     = state.get("incident_id", "")
     tool_calls_made = list(state.get("tool_calls_made", []))
     rca_signals     = dict(state.get("rca_signals", {}))
+    investigation_state = dict(state.get("investigation_state", {}))
+    evidence        = list(state.get("evidence", []))
+    investigation_findings = list(state.get("investigation_findings", []))
 
     for tc in last_message.tool_calls:
         tool_name = tc["name"]
         tool_args = tc["args"]
         tool_id   = tc["id"]
 
-        logger.info(f"[ToolNode] {tool_name} | args={json.dumps(tool_args)[:300]}")
+        logger.info(f"[ToolNode] {tool_name} | args={json.dumps(tool_args)}")
 
         # Update DB status at key investigation milestones
         if incident_id:
             from app.processor.process_incident import _update_status
             _STATUS_MAP = {
-                "get_ec2_analysis":    ("infra_analysis", WORKFLOW_STATES["infra_analysis"]),
-                "get_compressed_logs": ("logs_analysis",  WORKFLOW_STATES["logs_analysis"]),
-                "correlate_instances": ("ai_reasoning",   WORKFLOW_STATES["ai_reasoning"]),
-                "get_infra_events":    ("infra_analysis",  WORKFLOW_STATES["infra_analysis"]),
+                "get_ec2_analysis":             ("infra_analysis", WORKFLOW_STATES["infra_analysis"]),
+                "get_compressed_logs":          ("logs_analysis",  WORKFLOW_STATES["logs_analysis"]),
+                "correlate_instances":          ("ai_reasoning",   WORKFLOW_STATES["ai_reasoning"]),
+                "get_infra_events":             ("infra_analysis",  WORKFLOW_STATES["infra_analysis"]),
+                "investigate_network_path":     ("infra_analysis",  WORKFLOW_STATES["infra_analysis"]),
+                "check_cloudtrail_sg_changes":  ("infra_analysis",  WORKFLOW_STATES["infra_analysis"]),
             }
             if tool_name in _STATUS_MAP:
                 status, pct = _STATUS_MAP[tool_name]
                 _update_status(incident_id, status, pct)
 
-        tool_fn = _TOOL_MAP.get(tool_name)
-        if tool_fn is None:
-            result_content = json.dumps({"error": f"Unknown tool: {tool_name}"})
+        if tool_name == "resolve_incident_targets" and state.get("resolved_targets"):
+            logger.info("[ToolNode] Skipping resolve_incident_targets tool (using pre-resolved cache)")
+            result = {
+                "targets": state.get("resolved_targets", []),
+                "alb_meta": state.get("alb_meta", {}),
+                "_cached": True
+            }
+            result_content = json.dumps(result, default=str)
+            # Accumulate RCA signals just in case, though they were pre-extracted already
+            _accumulate_alb_signals(result, rca_signals)
         else:
-            try:
-                result         = tool_fn.invoke(tool_args)
-                result_content = json.dumps(result, default=str)
+            tool_fn = _TOOL_MAP.get(tool_name)
+            if tool_fn is None:
+                result_content = json.dumps({"error": f"Unknown tool: {tool_name}"})
+            else:
+                try:
+                    result         = tool_fn.invoke(tool_args)
+                    result_content = json.dumps(result, default=str)
 
-                # Accumulate RCA signals from tool results
-                if tool_name == "get_ec2_analysis":
-                    _accumulate_ec2_signals(result, rca_signals)
-                elif tool_name == "get_compressed_logs":
-                    _accumulate_log_signals(result, rca_signals)
-                elif tool_name == "resolve_incident_targets":
-                    _accumulate_alb_signals(result, rca_signals)
+                    # Accumulate RCA signals from tool results
+                    if tool_name == "get_ec2_analysis":
+                        _accumulate_ec2_signals(result, rca_signals)
+                    elif tool_name == "get_compressed_logs":
+                        _accumulate_log_signals(result, rca_signals)
+                    elif tool_name == "resolve_incident_targets":
+                        _accumulate_alb_signals(result, rca_signals)
+                    elif tool_name == "investigate_network_path":
+                        _accumulate_network_signals(result, rca_signals)
+                    elif tool_name == "check_cloudtrail_sg_changes":
+                        _accumulate_cloudtrail_sg_signals(result, rca_signals)
 
-            except Exception as exc:
-                logger.error(f"[ToolNode] {tool_name} raised: {exc}")
-                result_content = json.dumps({"error": str(exc)})
+                    # Accumulate generic findings
+                    for finding in result.get("findings", []):
+                        if "message" in finding:
+                            evidence.append(finding["message"])
+                        investigation_findings.append(finding)
+                        if "category" in finding:
+                            investigation_state[f"{finding['category']}_validated"] = True
 
-        logger.info(f"[ToolNode] {tool_name} result: {result_content[:500]}")
+                except Exception as exc:
+                    logger.error(f"[ToolNode] {tool_name} raised: {exc}")
+                    result_content = json.dumps({"error": str(exc)})
+
+        logger.info(f"[ToolNode] {tool_name} result: {result_content}...")
+        logger.info(f"[ToolNode] {tool_name} full result sent to LLM: {result_content}")
         tool_results.append(ToolMessage(content=result_content, tool_call_id=tool_id))
         tool_calls_made.append(tool_name)
 
@@ -229,6 +270,9 @@ def tool_node(state: AgentState) -> dict:
         "messages":        tool_results,
         "tool_calls_made": tool_calls_made,
         "rca_signals":     rca_signals,
+        "investigation_state": investigation_state,
+        "evidence":        evidence,
+        "investigation_findings": investigation_findings,
     }
 
 
@@ -269,6 +313,93 @@ def _accumulate_alb_signals(result: dict, rca_signals: dict):
         _merge_signals(rca_signals, new)
 
 
+def _accumulate_network_signals(result: dict, rca_signals: dict):
+    """Extract RCA signals from investigate_network_path result."""
+    blocked_layer = result.get("blocked_layer")
+    blocked_port  = result.get("blocked_port")
+    summary       = result.get("summary", "")
+
+    if not blocked_layer:
+        return  # network path clear — no new primary signal
+
+    rca_type_map = {
+        "security_group": "sg_blocked_port",
+        "nacl":           "nacl_blocked_port",
+        "route_table":    "route_table_missing",
+    }
+    description_map = {
+        "security_group": f"Security Group outbound rule blocks TCP port {blocked_port}.",
+        "nacl":           f"Network ACL denies outbound traffic to port {blocked_port}.",
+        "route_table":    "Route table missing default route — subnet cannot reach external hosts.",
+    }
+
+    rca_type    = rca_type_map.get(blocked_layer, "network_path_blocked")
+    description = description_map.get(blocked_layer, summary)
+
+    new_signal = {
+        "primary_root_cause": {
+            "type":        "primary_root_cause",
+            "rca_type":    rca_type,
+            "description": description,
+            "confidence":  0.90,
+            "source":      "network_path_investigation",
+            "evidence":    summary[:300],
+        },
+        "supporting_signals":    [],
+        "infra_symptoms":        [],
+        "downstream_impacts":    [],
+        "all_signals": [{
+            "type":        "primary_root_cause",
+            "rca_type":    rca_type,
+            "description": description,
+            "confidence":  0.90,
+            "source":      "network_path_investigation",
+            "evidence":    summary[:300],
+        }],
+        "has_strong_signal": True,
+    }
+    _merge_signals(rca_signals, new_signal)
+
+
+def _accumulate_cloudtrail_sg_signals(result: dict, rca_signals: dict):
+    """Upgrade confidence when CloudTrail confirms SG change before incident."""
+    probable_cause = result.get("probable_cause")
+    changes        = result.get("changes", [])
+
+    if not probable_cause or not changes:
+        return
+
+    # Find the most recent change before the incident
+    before_changes = [c for c in changes if c.get("minutes_before_incident", -1) > 0]
+    if not before_changes:
+        return
+
+    latest = before_changes[0]
+    high_conf_signal = {
+        "primary_root_cause": {
+            "type":        "primary_root_cause",
+            "rca_type":    "sg_change_caused_outage",
+            "description": probable_cause,
+            "confidence":  0.97,
+            "source":      "cloudtrail_sg_audit",
+            "evidence":    probable_cause[:300],
+        },
+        "supporting_signals":    [],
+        "infra_symptoms":        [],
+        "downstream_impacts":    [],
+        "all_signals": [{
+            "type":        "primary_root_cause",
+            "rca_type":    "sg_change_caused_outage",
+            "description": probable_cause,
+            "confidence":  0.97,
+            "source":      "cloudtrail_sg_audit",
+            "evidence":    probable_cause[:300],
+        }],
+        "has_strong_signal": True,
+    }
+    _merge_signals(rca_signals, high_conf_signal)
+
+
 def _merge_signals(existing: dict, new: dict):
     if not existing:
         existing.update(new)
@@ -302,8 +433,12 @@ def should_continue(state: AgentState) -> Literal["tools", "__end__"]:
 
     if hasattr(last, "tool_calls") and last.tool_calls:
         rca_signals     = state.get("rca_signals", {})
-        tool_calls_made = state.get("tool_calls_made", [])
-        stop, reason    = has_sufficient_evidence(rca_signals, tool_calls_made)
+        investigation_state = state.get("investigation_state", {})
+        evidence        = state.get("evidence", [])
+
+        candidate_rca   = rca_signals.get("primary_root_cause")
+        
+        stop, reason    = has_sufficient_evidence(candidate_rca, evidence, investigation_state)
         if stop:
             logger.info(f"[StopCondition] Early stop — {reason}")
             return "__end__"
@@ -334,6 +469,7 @@ def build_agent_graph():
 def _extract_structured_result(
     conversation_messages: list,
     accumulated_signals: dict,
+    investigation_findings: list[dict],
     incident_id: str,
 ) -> dict | None:
     """
@@ -343,20 +479,58 @@ def _extract_structured_result(
     This avoids all text-parsing failures — Bedrock's native tool-calling
     mechanism forces the model to emit a valid JSON object matching RCA_SCHEMA.
     """
-    extraction_prompt = HumanMessage(content=(
-        "Based on the investigation above, produce the final root cause analysis. "
-        "Fill every field from the evidence you gathered. "
-        "evidence[] must contain direct quotes from tool outputs, not paraphrases. "
-        "recommended_actions[] must have exactly 3 items: fix, verify, prevent."
-    ))
+    # 1. Find the final AI message from the investigation
+    last_ai_message = next(
+        (m for m in reversed(conversation_messages) if m.type == "ai" and hasattr(m, "content") and isinstance(m.content, str)),
+        None
+    )
+    final_agent_output = last_ai_message.content if last_ai_message else ""
 
-    messages_for_extraction = list(conversation_messages) + [extraction_prompt]
+    # 2. Build fresh extraction conversation without tool history
+    sys_msg = SystemMessage(
+        content=(
+            "You are an RCA extraction assistant. Based on the provided investigation details, "
+            "produce the final root cause analysis in the required JSON schema. "
+            "evidence[] must contain direct quotes, not paraphrases. "
+            "recommended_actions[] must have exactly 3 items: fix, verify, prevent.\n\n"
+            "CRITICAL RULES:\n"
+            "1. You MUST prioritize Investigation Findings over raw log symptoms.\n"
+            "2. Do not generate generic RCA such as 'Database unreachable', 'Service unavailable', or 'Connection timeout' if deterministic investigation findings exist.\n"
+            "3. When investigation findings identify a failed infrastructure component (e.g., 'Security group blocks outbound 5432'), that component is the RCA.\n"
+            "4. Confidence Calculation: Increase confidence when deterministic findings exist. For example, if only a log symptom exists (e.g. Postgres timeout), confidence is 40-60%. If a network blockage is found, confidence is 90-95%. If network blockage + CloudTrail correlation is found, confidence is 95-99%."
+        )
+    )
+
+    findings_text = json.dumps([f.get("message") for f in investigation_findings], indent=2) if investigation_findings else "[]"
+
+    human_msg = HumanMessage(
+        content=f"""
+Incident ID: {incident_id}
+
+Investigation Findings:
+{findings_text}
+
+Accumulated Signals:
+{json.dumps(accumulated_signals)}
+
+Final Agent Reasoning:
+{final_agent_output}
+
+Return valid JSON only matching the RCA_SCHEMA.
+"""
+    )
+
+    messages_for_extraction = [sys_msg, human_msg]
+
+    logger.info("[Extraction] Starting fresh extraction conversation")
+    logger.info(f"[Extraction] Fresh message count={len(messages_for_extraction)}")
 
     try:
         llm_structured = _build_llm_structured()
         result = safe_llm_invoke(llm_structured, messages_for_extraction)
 
         if isinstance(result, dict):
+            logger.info("[Extraction] Structured output success")
             return _normalise_structured(result)
 
         logger.warning("[Extraction] with_structured_output returned non-dict, falling back")
@@ -483,6 +657,7 @@ def _build_initial_human_message(
     rca_signals:      dict | None,
     timeline:         dict | None,
     similar_incidents: list[dict],
+    resolved_targets:  list[dict] | None = None,
 ) -> str:
     lines = [
         "## Incident Investigation Context",
@@ -507,6 +682,15 @@ def _build_initial_human_message(
             f"**Confidence:** {primary['confidence']:.0%}  |  **Source:** {primary['source']}",
             f"**Evidence:** {primary.get('evidence', '')}",
             "> Treat this as your leading hypothesis. Confirm with tools.",
+            "",
+        ]
+
+    if resolved_targets:
+        lines += [
+            "## Resolved Targets",
+            "Resolved targets are already available in state.",
+            "Do NOT call resolve_incident_targets unless resolved_targets is empty.",
+            json.dumps(resolved_targets, indent=2),
             "",
         ]
 
@@ -556,6 +740,8 @@ def run_agent_investigation(
     rca_signals:       dict | None = None,
     timeline:          dict | None = None,
     similar_incidents: list[dict] | None = None,
+    resolved_targets:  list[dict] | None = None,
+    alb_meta:          dict | None = None,
 ) -> dict:
     """
     Run the investigation for a single incident.
@@ -573,7 +759,7 @@ def run_agent_investigation(
     graph = build_agent_graph()
 
     initial_human = _build_initial_human_message(
-        incident_context, triage_result, rca_signals, timeline, similar_incidents
+        incident_context, triage_result, rca_signals, timeline, similar_incidents, resolved_targets
     )
 
     initial_state: AgentState = {
@@ -581,6 +767,17 @@ def run_agent_investigation(
         "incident_id":     incident_id,
         "tool_calls_made": [],
         "rca_signals":     rca_signals,
+        "resolved_targets": resolved_targets or [],
+        "alb_meta":         alb_meta or {},
+        "investigation_state": {
+            "network_validated": False,
+            "compute_validated": False,
+            "dependency_validated": False,
+            "configuration_validated": False,
+            "change_history_validated": False
+        },
+        "evidence": [],
+        "investigation_findings": [],
     }
 
     config      = RunnableConfig(recursion_limit=MAX_ITERATIONS * 2)
@@ -602,6 +799,7 @@ def run_agent_investigation(
     structured_result = _extract_structured_result(
         list(final_state["messages"]),
         accumulated_sigs,
+        final_state.get("investigation_findings", []),
         incident_id,
     )
 
