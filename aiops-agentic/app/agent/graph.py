@@ -127,16 +127,20 @@ def _build_bedrock_base() -> ChatBedrock:
     bedrock_client  = bedrock_factory.get_bedrock_runtime_client()
     bedrock_region  = bedrock_factory.region or BEDROCK_REGION
 
-    return ChatBedrock(
-        model_id=BEDROCK_MODEL,
-        region_name=bedrock_region,
-        client=bedrock_client,
-        model_kwargs={
-            "max_tokens":  1500,
-            "temperature": 0.1,
-            "top_p":       0.9,
-        },
-    )
+    try:
+        return ChatBedrock(
+            model_id=BEDROCK_MODEL,
+            region_name=bedrock_region,
+            client=bedrock_client,
+            model_kwargs={
+                "max_tokens":  1500,
+                "temperature": 0.1,
+                "top_p":       0.9,
+            },
+        )
+    except Exception as e:
+        logger.error(f"Failed to build Bedrock LLM: {e}")
+        raise
 
 
 def _build_llm_with_tools() -> ChatBedrock:
