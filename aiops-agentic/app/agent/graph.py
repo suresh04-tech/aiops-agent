@@ -57,7 +57,7 @@ logger = logging.getLogger(__name__)
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
-BEDROCK_MODEL  = os.environ.get("BEDROCK_MODEL_ID", "anthropic.claude-3-sonnet-20240229-v1:0")
+BEDROCK_MODEL  = os.environ.get("BEDROCK_MODEL_ID", "anthropic.claude-3-haiku-20240307-v1:0")
 BEDROCK_REGION = os.environ.get("AWS_REGION", "ap-south-1")
 MAX_ITERATIONS = int(os.environ.get("AGENT_MAX_ITERATIONS", "12"))
 
