@@ -6,8 +6,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import queue
+from app.api.routes import sop as sop_route
 from app.queue.manager import queue_manager
 from app.processor.worker import start_worker
+from app.sop.queue_manager import sop_queue_manager
+from app.sop.worker import start_sop_worker
 from logging.handlers import RotatingFileHandler
 
 logging.basicConfig(
@@ -24,18 +27,26 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Start background worker on startup, cancel on shutdown."""
+    """Start background workers on startup, cancel on shutdown."""
     logger.info("Starting incident processor worker...")
     worker_task = asyncio.create_task(start_worker(queue_manager))
+
+    logger.info("Starting SOP generation worker...")
+    sop_worker_task = asyncio.create_task(start_sop_worker(sop_queue_manager))
+
     yield
-    logger.info("Shutting down worker...")
+
+    logger.info("Shutting down workers...")
     worker_task.cancel()
-    try:
-        await worker_task
-    except asyncio.CancelledError:
-        pass
+    sop_worker_task.cancel()
+    for task in (worker_task, sop_worker_task):
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
 
 
 app = FastAPI(
@@ -52,10 +63,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(queue.router, prefix="/queue", tags=["Queue"])
+app.include_router(queue.router,      prefix="/queue", tags=["Queue"])
+app.include_router(sop_route.router,  prefix="/sop",   tags=["SOP"])
 
 
 @app.get("/health", tags=["Health"])
 async def health():
     stats = queue_manager.stats()
-    return {"status": "ok", "queue": stats}
+    sop_stats = sop_queue_manager.stats()
+    return {
+        "status":     "ok",
+        "queue":      stats,
+        "sop_queue":  sop_stats,
+    }

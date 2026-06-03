@@ -60,6 +60,7 @@ logger = logging.getLogger(__name__)
 BEDROCK_MODEL  = os.environ.get("BEDROCK_MODEL_ID", "anthropic.claude-3-haiku-20240307-v1:0")
 BEDROCK_REGION = os.environ.get("AWS_REGION", "ap-south-1")
 MAX_ITERATIONS = int(os.environ.get("AGENT_MAX_ITERATIONS", "12"))
+MAX_TOKENS     = int(os.environ.get("MAX_TOKENS", "1500"))
 
 # ── Output schema (5 fields only) ────────────────────────────────────────────
 
@@ -133,7 +134,7 @@ def _build_bedrock_base() -> ChatBedrock:
             region_name=bedrock_region,
             client=bedrock_client,
             model_kwargs={
-                "max_tokens":  1500,
+                "max_tokens":  MAX_TOKENS,
                 "temperature": 0.1,
                 "top_p":       0.9,
             },
@@ -158,7 +159,17 @@ def _build_llm_structured() -> ChatBedrock:
 def safe_llm_invoke(llm, messages):
     for attempt in range(5):
         try:
-            return llm.invoke(messages)
+            response = llm.invoke(messages)
+
+            # ── Token usage logging ────────────────────────────────────────────────
+            logger.info("========== BEDROCK TOKEN USAGE ==========")
+            if hasattr(response, "usage_metadata"):
+                logger.info(f"usage_metadata={response.usage_metadata}")
+            if hasattr(response, "response_metadata"):
+                logger.info(f"response_metadata={response.response_metadata}")
+            logger.info("==========================================")
+
+            return response
         except ClientError as e:
             if e.response["Error"]["Code"] == "ThrottlingException":
                 sleep_time = min(5 * (attempt + 1), 30)
@@ -816,5 +827,9 @@ def run_agent_investigation(
         "incident_id":       incident_id,
         "message_count":     len(final_state["messages"]),
         "tool_call_count":   tool_call_count,
+        "tool_calls_made":   final_state.get("tool_calls_made", []),
         "structured_result": structured_result,
+        "evidence":          final_state.get("evidence", []),
+        "investigation_findings": final_state.get("investigation_findings", []),
+        "rca_signals":       accumulated_sigs,
     }

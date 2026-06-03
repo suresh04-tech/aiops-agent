@@ -163,40 +163,45 @@ def _save_rca(incident_id: str, structured: dict,
         raise
 
 
-# def _save_evidence(incident_id: str, structured: dict) -> None:
-#     """
-#     Persist raw evidence (EC2, metrics, logs) from structured result.
-#     Non-fatal if it fails — RCA is already saved.
-#     """
-#     ec2_json     = structured.get("ec2_details_json", "{}")
-#     metrics_json = structured.get("metrics_json", "{}")
-#     logs_json    = structured.get("logs_summary_json", "{}")
-#     logs_count   = int(structured.get("logs_count", 0))
+def _save_evidence(incident_id: str, agent_result: dict) -> None:
+    """
+    Persist collected evidence, investigation findings, RCA signals, and tool calls.
+    Non-fatal if it fails — RCA is already saved.
+    """
+    evidence_list = agent_result.get("evidence", [])
+    investigation_findings = agent_result.get("investigation_findings", [])
+    rca_signals = agent_result.get("rca_signals", {})
+    tool_calls_made = agent_result.get("tool_calls_made", [])
 
-#     try:
-#         with get_db() as conn:
-#             with conn.cursor() as cur:
-#                 cur.execute(
-#                     """
-#                     INSERT INTO meyiconnect.incident_logs (
-#                         incident_id, ec2_details, ec2_status_checks,
-#                         cloudwatch_metrics, raw_logs, logs_count
-#                     )
-#                     VALUES (%s, %s, %s, %s, %s, %s)
-#                     ON CONFLICT (incident_id) DO UPDATE
-#                         SET cloudwatch_metrics = EXCLUDED.cloudwatch_metrics,
-#                             raw_logs           = EXCLUDED.raw_logs,
-#                             logs_count         = EXCLUDED.logs_count,
-#                             updated_at         = NOW()
-#                     RETURNING id
-#                     """,
-#                     (incident_id, ec2_json, "{}", metrics_json, logs_json, logs_count),
-#                 )
-#                 log_id = (cur.fetchone() or {}).get("id")
-#                 logger.info(f"[SaveEvidence] log_id={log_id} for {incident_id}")
-#             conn.commit()
-#     except Exception as exc:
-#         logger.error(f"[SaveEvidence] Failed for {incident_id}: {exc}")
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO meyiconnect.incident_evidence (
+                        incident_id, evidence_text, investigation_findings,
+                        rca_signals, tool_calls_made, created_at, updated_at
+                    )
+                    VALUES (%s, %s, %s, %s, %s, NOW(), NOW())
+                    ON CONFLICT (incident_id) DO UPDATE
+                        SET evidence_text          = EXCLUDED.evidence_text,
+                            investigation_findings = EXCLUDED.investigation_findings,
+                            rca_signals            = EXCLUDED.rca_signals,
+                            tool_calls_made        = EXCLUDED.tool_calls_made,
+                            updated_at             = NOW()
+                    """,
+                    (
+                        incident_id,
+                        json.dumps(evidence_list),
+                        json.dumps(investigation_findings),
+                        json.dumps(rca_signals),
+                        json.dumps(tool_calls_made),
+                    ),
+                )
+                logger.info(f"[SaveEvidence] Updated evidence for {incident_id}")
+            conn.commit()
+    except Exception as exc:
+        logger.error(f"[SaveEvidence] Failed for {incident_id}: {exc}")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -486,6 +491,7 @@ def process_incident(payload: dict) -> None:
             _update_status(incident_id, "remediation_generated",
                            WORKFLOW_STATES["remediation_generated"])
             _save_rca(incident_id, structured)   # also sets status=completed, percent=100
+            _save_evidence(incident_id, result)
         else:
             logger.error(f"[Agent] No structured result for {incident_id}.")
             _update_status(incident_id, "failed")
