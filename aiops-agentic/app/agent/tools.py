@@ -75,11 +75,24 @@ def _safe(fn, *args, **kwargs) -> dict:
 def resolve_incident_targets() -> dict:
     """
     Resolve incident dependencies into concrete EC2 instance targets.
-    Handles EC2 (type=ec2) and ALB (type=alb) dependencies.
-    Returns targets list and ALB metadata.
+
+    Handles three dependency types:
+      - ec2    (type=ec2)  — direct EC2 instance ID
+      - alb    (type=alb)  — ALB DNS name → target groups → EC2 instances
+      - domain (type=domain) — custom domain (e.g. api.customer.com) resolved
+                               via DNS CNAME to ALB DNS, then same as alb path.
+                               Security check: verifies the resolved ALB belongs
+                               to the configured AWS account before proceeding.
+
+    If "type" is omitted, it is auto-detected from "resource_id":
+      i-...                      → ec2
+      *.elb.amazonaws.com        → alb
+      anything else              → domain
+
+    Returns targets list and ALB/domain metadata.
     Always call this first.
     """
-    from app.processor.dependency_resolver import resolve_dependencies
+    from app.processor.dependency_resolver import resolve_dependencies, _detect_resource_type
 
     row      = _incident()
     raw_deps = row.get("dependencies") or []
@@ -93,9 +106,10 @@ def resolve_incident_targets() -> dict:
     default_region = _region()
     for d in raw_deps:
         if "type" not in d:
+            resource_id = d.get("resource_id") or d.get("instance_id", "")
             d = {
-                "type":           "ec2",
-                "resource_id":    d.get("instance_id", ""),
+                "type":           _detect_resource_type(resource_id),
+                "resource_id":    resource_id,
                 "region":         d.get("region", default_region),
                 "log_group_name": d.get("log_group_name") or d.get("log_group_names") or [],
             }
@@ -390,7 +404,8 @@ def get_alb_target_health(alb_dns_or_arn: str, region: str = "") -> dict:
     Check ALB target health for all registered targets.
 
     Args:
-        alb_dns_or_arn: ALB DNS name or ARN
+        alb_dns_or_arn: ALB DNS name, ARN, or custom domain (e.g. api.customer.com).
+                        Custom domains are resolved via DNS CNAME to an ALB DNS first.
         region: AWS region
     """
     region = region or _region()
@@ -399,11 +414,20 @@ def get_alb_target_health(alb_dns_or_arn: str, region: str = "") -> dict:
     def _run():
         if not alb_dns_or_arn.startswith("arn:"):
             dns = alb_dns_or_arn.lower().replace("http://", "").replace("https://", "").strip("/")
+
+            # If this looks like a custom domain (not an ALB DNS), resolve it first
+            if ".elb.amazonaws.com" not in dns:
+                from app.processor.dependency_resolver import _resolve_domain_to_alb_dns
+                resolved = _resolve_domain_to_alb_dns(dns)
+                if not resolved:
+                    return {"error": f"Domain '{alb_dns_or_arn}' did not resolve to an ALB DNS"}
+                dns = resolved
+
             pag     = elbv2.get_paginator("describe_load_balancers")
             alb_arn = None
             for page in pag.paginate():
                 for lb in page.get("LoadBalancers", []):
-                    if lb.get("DNSName", "").lower() == dns:
+                    if lb.get("DNSName", "").lower().removeprefix("dualstack.") == dns.removeprefix("dualstack."):
                         alb_arn = lb["LoadBalancerArn"]
                         break
                 if alb_arn:
@@ -930,11 +954,23 @@ def check_cloudtrail_sg_changes(
                     pass
 
                 user_identity = raw_ct.get("userIdentity", {})
-                user = (
-                    user_identity.get("userName")
-                    or user_identity.get("sessionContext", {}).get("sessionIssuer", {}).get("userName")
-                    or user_identity.get("arn", "unknown")
+
+                role_name = (
+                    user_identity.get("sessionContext", {})
+                    .get("sessionIssuer", {})
+                    .get("userName")
                 )
+
+                arn = user_identity.get("arn", "")
+
+                actual_user = None
+
+                if ":assumed-role/" in arn:
+                    parts = arn.split("/")
+                    if len(parts) >= 3:
+                        actual_user = parts[-1]
+
+                user = actual_user or user_identity.get("userName") or "unknown"
 
                 # Extract changed rules from request parameters
                 req_params    = raw_ct.get("requestParameters", {})
@@ -951,12 +987,13 @@ def check_cloudtrail_sg_changes(
                     })
 
                 changes.append({
-                    "event_name":            event.get("EventName"),
-                    "event_time":            event_time.isoformat(),
-                    "user":                  user,
+                    "event_name":              event.get("EventName"),
+                    "event_time":              event_time.isoformat(),
+                    "user":                    user,
+                    "role":                    role_name,
                     "minutes_before_incident": minutes_before,
-                    "changed_rules":         changed_rules,
-                    "source_ip":             raw_ct.get("sourceIPAddress", ""),
+                    "changed_rules":           changed_rules,
+                    "source_ip":               raw_ct.get("sourceIPAddress", ""),
                 })
 
         # Sort: most recent first
@@ -968,10 +1005,20 @@ def check_cloudtrail_sg_changes(
         if before_changes:
             latest = before_changes[0]
             probable_cause = (
-                f"Security group {security_group_id} was modified by '{latest['user']}' "
-                f"at {latest['event_time']} ({latest['minutes_before_incident']:.1f} min before incident). "
-                f"Event: {latest['event_name']}. "
-                + (f"Changed rules: {json.dumps(latest['changed_rules'])}" if latest["changed_rules"] else "")
+                f"Security group {security_group_id} was modified by user "
+                f"'{latest['user']}'"
+                + (
+                    f" using role '{latest['role']}'"
+                    if latest.get("role")
+                    else ""
+                )
+                + f" at {latest['event_time']} "
+                f"({latest['minutes_before_incident']:.1f} min before incident). "
+                + (
+                    f"Changed rules: {json.dumps(latest['changed_rules'])}"
+                    if latest.get("changed_rules")
+                    else ""
+                )
             )
             findings.append({"category": "change_history", "message": f"CloudTrail shows SG {security_group_id} modified by {latest['user']}"})
 

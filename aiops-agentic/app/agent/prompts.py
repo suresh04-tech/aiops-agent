@@ -135,6 +135,14 @@ Example chains:
 
 Always start with:
   1. resolve_incident_targets() — maps dependencies to concrete EC2 instance IDs.
+     This tool handles all three dependency types automatically:
+       • ec2    (type=ec2)  — direct EC2 instance ID
+       • alb    (type=alb)  — ALB DNS name → EC2 targets via target groups
+       • domain (type=domain) — custom domain (api.customer.com) resolved via DNS
+                                CNAME → ALB DNS (verified in account) → EC2 targets
+     If "type" is omitted from a dependency, it is auto-detected from resource_id.
+     Domains that resolve to ALBs outside the configured AWS account are BLOCKED
+     and will return an error — do not continue investigation in that case.
 
 Then choose your next tools based on what you find:
 
@@ -160,6 +168,14 @@ Then choose your next tools based on what you find:
 
   IF the ALB state alone is ambiguous (multiple different target reasons):
     → get_alb_target_health() to get per-instance breakdown.
+    → Note: get_alb_target_health() also accepts custom domain names — it will
+      resolve them automatically to the underlying ALB.
+
+  IF resolve_incident_targets() returns an error containing "does not belong to
+  the configured AWS account":
+    → STOP. Do not attempt further investigation. Report the security block in
+      probable_root_cause with confidence=0 and recommend verifying the domain
+      CNAME configuration.
 
 STOP as soon as: confirmed Tier 1/2 root cause + full causal chain + one corroborating signal.
 Do NOT call tools you do not need.

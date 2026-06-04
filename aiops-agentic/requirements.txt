@@ -17,3 +17,4 @@ langchain-aws==0.2.35        # ChatBedrock for tool calling
 
 # ── Utilities ──────────────────────────────────────────────────────────────────
 python-dotenv==1.0.1
+dnspython==2.7.0             # DNS CNAME resolution for domain → ALB lookup
