@@ -5,7 +5,7 @@ Public /sop endpoints.
 
 POST /sop/enqueue
     Two payload shapes accepted:
-      { "sop_id": "SOP-201", "incident_id": "abc-123" }   ← INCIDENT mode
+      { "sop_id": "SOP-201", "alert_id": "abc-123" }      ← ALERT mode
       { "sop_id": "SOP-201", "prompt": "We run a ..." }   ← PROMPT mode
 
     Creates the SOP row in DB (status=pending) then enqueues generation job.
@@ -38,18 +38,18 @@ start = time.time()
 
 class SopEnqueueRequest(BaseModel):
     sop_id:      str
-    incident_id: Optional[str] = None
+    alert_id:    Optional[str] = None
     prompt:      Optional[str] = None
 
     @model_validator(mode="after")
     def check_exclusive(self) -> "SopEnqueueRequest":
-        has_incident = bool(self.incident_id and self.incident_id.strip())
-        has_prompt   = bool(self.prompt and self.prompt.strip())
+        has_alert  = bool(self.alert_id and self.alert_id.strip())
+        has_prompt = bool(self.prompt and self.prompt.strip())
 
-        if has_incident and has_prompt:
-            raise ValueError("Provide either incident_id OR prompt — not both.")
-        if not has_incident and not has_prompt:
-            raise ValueError("Provide either incident_id or prompt.")
+        if has_alert and has_prompt:
+            raise ValueError("Provide either alert_id OR prompt — not both.")
+        if not has_alert and not has_prompt:
+            raise ValueError("Provide either alert_id or prompt.")
         return self
 
 
@@ -57,6 +57,11 @@ class SopEnqueueRequest(BaseModel):
 
 
 def _get_sop_row(db_id: str) -> dict | None:
+    try:
+        uuid.UUID(str(db_id))
+    except ValueError:
+        return None
+
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -74,20 +79,20 @@ async def enqueue_sop(body: SopEnqueueRequest):
     """
     Enqueue a SOP generation job.
 
-    Mode A — Incident-based:
-      { "incident_id": "<uuid>" }
-      The worker loads the incident + RCA result from DB and generates a
+    Mode A — Alert-based:
+      { "alert_id": "<uuid>" }
+      The worker loads the alert + historical RCA result from DB and generates a
       detailed, evidence-backed runbook.
 
     Mode B — Prompt-based:
       { "prompt": "We run a Flask app on ECS ..." }
       The worker uses the free-form description to generate a general runbook.
     """
-    incident_id = body.incident_id.strip() if body.incident_id else None
-    user_prompt = body.prompt.strip()      if body.prompt      else None
+    alert_id    = body.alert_id.strip() if body.alert_id else None
+    user_prompt = body.prompt.strip()   if body.prompt   else None
     req_sop_id  = body.sop_id.strip()
 
-    mode = "incident" if incident_id else "prompt"
+    mode = "alert" if alert_id else "prompt"
 
     # Verify the row exists and fetch the human-readable sop_id
     try:
@@ -107,8 +112,8 @@ async def enqueue_sop(body: SopEnqueueRequest):
 
     # Enqueue for background generation
     payload: dict = {"id": db_id, "sop_id": sop_id_str}
-    if incident_id:
-        payload["incident_id"] = incident_id
+    if alert_id:
+        payload["alert_id"] = alert_id
     else:
         payload["prompt"] = user_prompt
 

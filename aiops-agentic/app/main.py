@@ -25,6 +25,25 @@ logging.basicConfig(
         logging.StreamHandler()
     ]
 )
+
+# ── SOP-specific logging ───────────────────────────────────────────────────────
+sop_formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s — %(message)s")
+sop_file_handler = RotatingFileHandler(
+    "logs/sop.log",
+    maxBytes=10 * 1024 * 1024,
+    backupCount=5
+)
+sop_file_handler.setFormatter(sop_formatter)
+sop_stream_handler = logging.StreamHandler()
+sop_stream_handler.setFormatter(sop_formatter)
+
+for logger_name in ["app.sop", "app.api.routes.sop"]:
+    l = logging.getLogger(logger_name)
+    l.setLevel(logging.INFO)
+    l.propagate = False
+    l.addHandler(sop_file_handler)
+    l.addHandler(sop_stream_handler)
+
 logger = logging.getLogger(__name__)
 
 

@@ -25,6 +25,7 @@ from app.sop.prompts import (
     SOP_SYSTEM_PROMPT,
     build_incident_user_prompt,
     build_prompt_user_prompt,
+    build_alert_user_prompt,
 )
 
 logger = logging.getLogger(__name__)
@@ -196,6 +197,30 @@ def generate_sop_from_incident(
         incident=incident,
         rca_result=rca_result,
         evidence_data=evidence_data,
+    )
+    return _invoke_sop_llm(user_message)
+
+
+def generate_sop_from_alert(
+    sop_id: str,
+    current_alert: dict,
+    historical_context: dict[str, dict],
+) -> str:
+    """
+    Generate a Markdown runbook from an alert + optional historical RCA context.
+
+    Args:
+        sop_id:             Caller-supplied SOP identifier.
+        current_alert:      Current alert row from insight_alerts.
+        historical_context: Merged dict keyed by incident_id with RCA, evidence, etc.
+
+    Returns:
+        Markdown string of the complete runbook.
+    """
+    user_message = build_alert_user_prompt(
+        sop_id=sop_id,
+        current_alert=current_alert,
+        historical_context=historical_context,
     )
     return _invoke_sop_llm(user_message)
 

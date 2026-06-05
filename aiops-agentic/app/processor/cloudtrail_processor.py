@@ -237,6 +237,46 @@ def _extract_user(raw_event: dict) -> str:
     return uid.get("arn") or uid.get("principalId") or "unknown"
 
 
+def extract_cloudtrail_actor(user_identity):
+    """
+    Returns:
+        actor (str): Human-readable actor name
+        role (str | None): Role name if applicable
+        user_type (str): CloudTrail identity type
+    """
+    user_type = user_identity.get("type", "unknown")
+    
+    role = (
+        user_identity.get("sessionContext", {})
+        .get("sessionIssuer", {})
+        .get("userName")
+    )
+    
+    if user_type == "IAMUser":
+        actor = user_identity.get("userName", "unknown")
+    elif user_type == "AssumedRole":
+        arn = user_identity.get("arn", "")
+        actor = "unknown"
+        if ":assumed-role/" in arn:
+            parts = arn.split("/")
+            if len(parts) >= 3:
+                actor = parts[-1]
+            else:
+                actor = arn
+        else:
+            actor = arn
+    elif user_type == "Root":
+        actor = "Root User"
+    else:
+        actor = (
+            user_identity.get("userName")
+            or user_identity.get("arn")
+            or "unknown"
+        )
+        
+    return actor, role, user_type
+
+
 def _extract_resources(raw_event: dict) -> list[str]:
     """Extract resource names/ARNs from raw CloudTrail event."""
     resources = []

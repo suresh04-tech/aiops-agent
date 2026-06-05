@@ -128,9 +128,6 @@ def _save_rca(incident_id: str, structured: dict,
         "recommended_actions": structured.get("recommended_actions", []),
     }
 
-    # remediation_steps = recommended_actions as JSON list
-    remediation_steps = structured.get("recommended_actions", [])
-
     try:
         with get_db() as conn:
             with conn.cursor() as cur:
@@ -141,7 +138,6 @@ def _save_rca(incident_id: str, structured: dict,
                         analysis_status       = 'completed',
                         analysis_percent      = 100,
                         analysis_result       = %s,
-                        remediation_steps     = %s,
                         confidence_score      = %s,
                         ai_model_used         = %s,
                         analysis_completed_at = NOW(),
@@ -150,7 +146,6 @@ def _save_rca(incident_id: str, structured: dict,
                     """,
                     (
                         json.dumps(analysis_result),
-                        json.dumps(remediation_steps),
                         str(confidence),
                         ai_model,
                         incident_id,

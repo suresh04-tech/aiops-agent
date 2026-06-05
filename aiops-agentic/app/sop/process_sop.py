@@ -25,6 +25,7 @@ import re
 from app.utils.db import get_db
 from app.sop.generator import (
     generate_sop_from_incident,
+    generate_sop_from_alert,
     generate_sop_from_prompt,
     SOP_BEDROCK_MODEL,
 )
@@ -162,6 +163,125 @@ def _load_incident_with_rca(incident_id: str) -> tuple[dict | None, dict | None,
         return None, None, {}
 
 
+def _load_alert_with_historical_rca(alert_id: str) -> tuple[dict | None, dict[str, dict]]:
+    """
+    Returns:
+        current_alert: dict from insight_alerts (or None)
+        historical_context: dict keyed by incident_id containing analysis_result, 
+                            evidence_text, investigation_findings, rca_signals
+    """
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                # 1. Load current alert
+                cur.execute(
+                    """
+                    SELECT id, connector_name, alert_name, description, additional_configuration
+                    FROM meyiconnect.insight_alerts
+                    WHERE id = %s
+                    """,
+                    (alert_id,)
+                )
+                alert_row = cur.fetchone()
+                if not alert_row:
+                    return None, {}
+                current_alert = dict(alert_row)
+                
+                alert_name = current_alert.get("alert_name")
+                if not alert_name:
+                    return current_alert, {}
+
+                # 2. Find similar alerts and their linked incidents
+                cur.execute(
+                    """
+                    SELECT incident_id
+                    FROM meyiconnect.insight_alerts
+                    WHERE LOWER(alert_name) = LOWER(%s)
+                      AND incident_id IS NOT NULL
+                    """,
+                    (alert_name,)
+                )
+                incident_ids = [row["incident_id"] for row in cur.fetchall()]
+                
+                if not incident_ids:
+                    return current_alert, {}
+
+                # 3. Load historical incidents with RCA (limit 10)
+                cur.execute(
+                    """
+                    SELECT id, analysis_result
+                    FROM meyiconnect.insight_incidents
+                    WHERE id = ANY(%s::uuid[])
+                      AND analysis_result IS NOT NULL
+                    ORDER BY updated_at DESC
+                    LIMIT 10
+                    """,
+                    (incident_ids,)
+                )
+                incident_rows = cur.fetchall()
+                if not incident_rows:
+                    return current_alert, {}
+
+                rca_incident_ids = [row["id"] for row in incident_rows]
+                
+                # 4. Build merged context struct
+                historical_context = {}
+                latest_rca = None
+                for idx, row in enumerate(incident_rows):
+                    raw = row["analysis_result"]
+                    if isinstance(raw, str):
+                        try:
+                            rca_json = json.loads(raw)
+                        except Exception:
+                            rca_json = {}
+                    elif isinstance(raw, dict):
+                        rca_json = raw
+                    else:
+                        rca_json = {}
+                    
+                    if idx == 0:
+                        latest_rca = rca_json
+
+                    historical_context[row["id"]] = {
+                        "analysis_result": rca_json,
+                        "evidence_text": [],
+                        "investigation_findings": [],
+                        "rca_signals": []
+                    }
+
+                # Attach the latest RCA to current_alert so we can infer severity easily later
+                current_alert["_latest_rca"] = latest_rca
+
+                # 5. Load evidence only for the ones with RCA
+                cur.execute(
+                    """
+                    SELECT incident_id, evidence_text, investigation_findings, rca_signals
+                    FROM meyiconnect.incident_evidence
+                    WHERE incident_id = ANY(%s::uuid[])
+                    """,
+                    (rca_incident_ids,)
+                )
+                for ev_row in cur.fetchall():
+                    iid = ev_row["incident_id"]
+                    if iid in historical_context:
+                        # parse json arrays
+                        def _parse(val):
+                            if isinstance(val, str):
+                                try: return json.loads(val)
+                                except: return [val] if val else []
+                            return val if isinstance(val, list) else []
+                        
+                        historical_context[iid]["evidence_text"] = _parse(ev_row["evidence_text"])
+                        historical_context[iid]["investigation_findings"] = _parse(ev_row["investigation_findings"])
+                        historical_context[iid]["rca_signals"] = _parse(ev_row["rca_signals"])
+
+                return current_alert, historical_context
+
+    except Exception as exc:
+        logger.error(f"[SOP-Load] DB error for alert {alert_id}: {exc}")
+        return None, {}
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Markdown metadata extractors
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -251,45 +371,46 @@ def process_sop(payload: dict) -> None:
 
     db_id       = payload.get("id")
     sop_id      = payload.get("sop_id", "unknown")
-    incident_id = payload.get("incident_id")
+    alert_id    = payload.get("alert_id")
     user_prompt = payload.get("prompt")
 
     if not db_id:
         logger.error("[SOP] db_id missing from payload — cannot update status")
         return
 
-    if not incident_id and not user_prompt:
-        logger.error(f"[SOP] db_id={db_id}: payload must have incident_id OR prompt")
+    if not alert_id and not user_prompt:
+        logger.error(f"[SOP] db_id={db_id}: payload must have alert_id OR prompt")
         _update_sop_status(db_id, "failed")
         return
 
     try:
-        # ── MODE A: Incident-based (no guardrail — context from DB) ───────
-        if incident_id:
-            logger.info(f"[SOP] Mode=INCIDENT db_id={db_id} incident_id={incident_id}")
+        # ── MODE A: Alert-based (no guardrail — context from DB) ──────────
+        if alert_id:
+            logger.info(f"[SOP] Mode=ALERT db_id={db_id} alert_id={alert_id}")
             _update_sop_status(db_id, "generating")
 
-            incident, rca_result, evidence_data = _load_incident_with_rca(incident_id)
+            current_alert, historical_context = _load_alert_with_historical_rca(alert_id)
 
-            if incident is None:
-                logger.error(f"[SOP] Incident {incident_id} not found — aborting")
+            if current_alert is None:
+                logger.error(f"[SOP] Alert {alert_id} not found — aborting")
                 _update_sop_status(db_id, "failed")
                 return
 
+            latest_rca = current_alert.pop("_latest_rca", None)
+            
             fallback_severity = (
-                _infer_severity_from_rca(rca_result)
-                if rca_result
-                else _infer_severity_from_monitor(incident.get("monitor_type", ""))
+                _infer_severity_from_rca(latest_rca)
+                if latest_rca
+                else "Medium"
             )
 
-            alert_type = incident.get("monitor_type", "")
-            service    = incident.get("monitor_name", "")
+            alert_type = current_alert.get("connector_name", "")
+            service    = current_alert.get("alert_name", "")
 
-            content_md = generate_sop_from_incident(
+            content_md = generate_sop_from_alert(
                 sop_id=sop_id,
-                incident=incident,
-                rca_result=rca_result or {},
-                evidence_data=evidence_data or {},
+                current_alert=current_alert,
+                historical_context=historical_context,
             )
 
         # ── MODE B: Prompt-based ───────────────────────────────────────────

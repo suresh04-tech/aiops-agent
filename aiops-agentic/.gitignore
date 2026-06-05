@@ -9,4 +9,4 @@ build/
 venv/
 .env
 logs/
-aiops.log
+*.log

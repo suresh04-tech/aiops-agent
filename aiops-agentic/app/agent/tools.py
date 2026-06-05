@@ -930,11 +930,8 @@ def check_cloudtrail_sg_changes(
                     pass
 
                 user_identity = raw_ct.get("userIdentity", {})
-                user = (
-                    user_identity.get("userName")
-                    or user_identity.get("sessionContext", {}).get("sessionIssuer", {}).get("userName")
-                    or user_identity.get("arn", "unknown")
-                )
+                from app.processor.cloudtrail_processor import extract_cloudtrail_actor
+                user, role, user_type = extract_cloudtrail_actor(user_identity)
 
                 # Extract changed rules from request parameters
                 req_params    = raw_ct.get("requestParameters", {})
@@ -954,6 +951,8 @@ def check_cloudtrail_sg_changes(
                     "event_name":            event.get("EventName"),
                     "event_time":            event_time.isoformat(),
                     "user":                  user,
+                    "role":                  role,
+                    "user_type":             user_type,
                     "minutes_before_incident": minutes_before,
                     "changed_rules":         changed_rules,
                     "source_ip":             raw_ct.get("sourceIPAddress", ""),
@@ -967,10 +966,13 @@ def check_cloudtrail_sg_changes(
         before_changes = [c for c in changes if c["minutes_before_incident"] > 0]
         if before_changes:
             latest = before_changes[0]
+            actor_str = f"user '{latest['user']}'"
+            if latest.get("role"):
+                actor_str += f" using role '{latest['role']}'"
+                
             probable_cause = (
-                f"Security group {security_group_id} was modified by '{latest['user']}' "
+                f"Security group {security_group_id} was modified by {actor_str} "
                 f"at {latest['event_time']} ({latest['minutes_before_incident']:.1f} min before incident). "
-                f"Event: {latest['event_name']}. "
                 + (f"Changed rules: {json.dumps(latest['changed_rules'])}" if latest["changed_rules"] else "")
             )
             findings.append({"category": "change_history", "message": f"CloudTrail shows SG {security_group_id} modified by {latest['user']}"})

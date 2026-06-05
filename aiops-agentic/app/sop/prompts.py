@@ -242,6 +242,89 @@ Requirements:
 """
 
 
+def build_alert_user_prompt(
+    sop_id: str,
+    current_alert: dict,
+    historical_context: dict[str, dict],
+) -> str:
+    """Build the user message for ALERT mode."""
+    alert_name = current_alert.get("alert_name", "Unknown")
+    connector  = current_alert.get("connector_name", "Unknown")
+    desc       = current_alert.get("description", "No description")
+    config     = current_alert.get("additional_configuration", {})
+
+    alert_block = f"""\
+Connector   : {connector}
+Alert Name  : {alert_name}
+Description : {desc}
+Additional Configuration: {json.dumps(config) if isinstance(config, dict) else config}
+"""
+
+    if not historical_context:
+        hist_block = "  - No historical incidents with RCA found."
+    else:
+        blocks = []
+        for i, (iid, ctx) in enumerate(historical_context.items()):
+            rca = ctx.get("analysis_result", {})
+            prob_cause = rca.get("probable_root_cause", "Unknown")
+            
+            ev_list = ctx.get("evidence_text", [])
+            ev_str = "\n".join(f"    - {e}" for e in ev_list) if ev_list else "    - None"
+            
+            fi_list = ctx.get("investigation_findings", [])
+            fi_str = ""
+            for f in fi_list:
+                if isinstance(f, dict):
+                    cat = f.get("category", "info")
+                    det = json.dumps(f.get("details", {}))[:300]
+                    fi_str += f"    - [{cat}] {det}\n"
+                else:
+                    fi_str += f"    - {str(f)[:300]}\n"
+            if not fi_str:
+                fi_str = "    - None"
+                
+            rca_sig = ctx.get("rca_signals", [])
+            sig_str = "\n".join(f"    - {s}" for s in rca_sig) if rca_sig else "    - None"
+            
+            blocks.append(f"""\
+Historical Incident #{i+1} (ID: {iid})
+  Analysis Result: {prob_cause}
+  Evidence:
+{ev_str}
+  Investigation Findings:
+{fi_str}
+  RCA Signals:
+{sig_str}""")
+        hist_block = "\n".join(blocks)
+
+    return f"""\
+Generate a complete production-grade SOP/Runbook from the alert details below.
+Follow the section schema exactly. Return Markdown only — no JSON, no preamble.
+
+═══ CURRENT ALERT ════════════════════════════════════════════════════════
+
+{alert_block}
+
+═══ HISTORICAL RCA KNOWLEDGE ═════════════════════════════════════════════
+
+{hist_block}
+
+═══ GENERATION INSTRUCTIONS ══════════════════════════════════════════════
+
+SOP ID      : {sop_id}
+Alert Type  : {connector}
+Service     : {alert_name}
+
+Requirements:
+- If historical knowledge is present, incorporate the known root causes and 
+  investigation paths into the SOP.
+- If historical knowledge is NOT present, generate the SOP purely based on 
+  the alert details.
+- Use <placeholder> syntax ONLY where values are genuinely unknown.
+- Every CLI command must be in ```bash fenced blocks.
+"""
+
+
 def build_prompt_user_prompt(sop_id: str, user_prompt: str) -> str:
     """Build the user message for PROMPT mode."""
     return f"""\
