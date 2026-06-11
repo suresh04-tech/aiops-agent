@@ -3,26 +3,23 @@ FROM python:3.11-slim
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# System deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev gcc \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
+
 COPY .env .env
 
-# Install Python deps first (better layer caching)
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
 COPY app/ ./app/
 
-# Create logs directory
-RUN mkdir -p /app/logs
+RUN mkdir -p /app/logs \
+    && useradd -m appuser \
+    && chown -R appuser:appuser /app
 
-# Non-root user for security
-RUN useradd -m appuser && chown -R appuser /app
 USER appuser
 
 EXPOSE 8000

@@ -9,7 +9,7 @@ services:
     env_file:
       - .env
     volumes:
-      - ./logs:/app/logs  # Persistent logs
+      - app_logs:/app/logs
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -17,3 +17,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
+
+volumes:
+  app_logs:

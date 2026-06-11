@@ -44,18 +44,28 @@ logger = logging.getLogger(__name__)
 # DB helpers
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def _update_sop_status(db_id: str, status: str) -> None:
+def _update_sop_status(db_id: str, status: str, error_response: str | None = None) -> None:
     try:
         with get_db() as conn:
             with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    UPDATE meyiconnect.insight_sops
-                    SET status = %s, updated_at = NOW()
-                    WHERE id = %s
-                    """,
-                    (status, db_id),
-                )
+                if error_response:
+                    cur.execute(
+                        """
+                        UPDATE meyiconnect.insight_sops
+                        SET status = %s, error_response = %s, updated_at = NOW()
+                        WHERE id = %s
+                        """,
+                        (status, error_response, db_id),
+                    )
+                else:
+                    cur.execute(
+                        """
+                        UPDATE meyiconnect.insight_sops
+                        SET status = %s, updated_at = NOW()
+                        WHERE id = %s
+                        """,
+                        (status, db_id),
+                    )
             conn.commit()
         logger.info(f"[SOP-Status] {db_id} → {status}")
     except Exception as exc:
@@ -72,7 +82,7 @@ def _mark_invalid_prompt(db_id: str, error_message: str) -> None:
                     UPDATE meyiconnect.insight_sops
                     SET
                         status        = 'invalid_prompt',
-                        steps = %s,
+                        error_response = %s,
                         updated_at    = NOW()
                     WHERE id = %s
                     """,
@@ -408,8 +418,9 @@ def process_sop(payload: dict) -> None:
         return
 
     if not alert_id and not user_prompt:
-        log.error(f"[SOP] db_id={db_id}: payload must have alert_id OR prompt")
-        _update_sop_status(db_id, "failed")
+        err_msg = "payload must have alert_id OR prompt"
+        log.error(f"[SOP] db_id={db_id}: {err_msg}")
+        _update_sop_status(db_id, "failed", error_response=err_msg)
         return
 
     try:
@@ -421,8 +432,9 @@ def process_sop(payload: dict) -> None:
             current_alert, historical_context = _load_alert_with_historical_rca(alert_id)
 
             if current_alert is None:
-                log.error(f"[SOP] Alert {alert_id} not found — aborting")
-                _update_sop_status(db_id, "failed")
+                err_msg = f"Alert {alert_id} not found — aborting"
+                log.error(f"[SOP] {err_msg}")
+                _update_sop_status(db_id, "failed", error_response=err_msg)
                 return
 
             latest_rca = current_alert.pop("_latest_rca", None)
@@ -534,10 +546,10 @@ def process_sop(payload: dict) -> None:
         log.info(f"SOP COMPLETED: db_id={db_id} title='{title}' severity={severity}")
         log.info("=" * 60)
 
-    except Exception:
+    except Exception as exc:
         log.exception(f"[SOP-Fatal] process_sop failed for db_id={db_id}")
         try:
-            _update_sop_status(db_id, "failed")
+            _update_sop_status(db_id, "failed", error_response=str(exc))
         except Exception:
             logger.exception("[SOP-Fatal] Could not update status to failed")
         raise
