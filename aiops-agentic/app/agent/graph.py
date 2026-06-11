@@ -571,6 +571,16 @@ Return valid JSON only matching the RCA_SCHEMA.
     return None
 
 
+def _ensure_list(value) -> list:
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return value
+    if isinstance(value, str):
+        return [value]
+    return [str(value)]
+
+
 def _normalise_structured(raw: dict) -> dict:
     """Normalise / coerce field types to match the expected schema."""
     confidence = raw.get("confidence", 50)
@@ -586,9 +596,9 @@ def _normalise_structured(raw: dict) -> dict:
     return {
         "probable_root_cause": str(raw.get("probable_root_cause") or raw.get("root_cause") or ""),
         "confidence":          confidence,
-        "evidence":            [str(e) for e in (raw.get("evidence") or [])],
-        "dependency_impact":   [str(d) for d in (raw.get("dependency_impact") or [])],
-        "recommended_actions": [str(a) for a in (raw.get("recommended_actions") or [])],
+        "evidence":            [str(x) for x in _ensure_list(raw.get("evidence"))],
+        "dependency_impact":   [str(x) for x in _ensure_list(raw.get("dependency_impact"))],
+        "recommended_actions": [str(x) for x in _ensure_list(raw.get("recommended_actions"))],
     }
 
 

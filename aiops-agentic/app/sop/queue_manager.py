@@ -5,7 +5,7 @@ In-process asyncio queue for SOP generation jobs.
 Mirrors app/queue/manager.py — same design, separate singleton.
 
 Messages are plain dicts with shape:
-  { "id": str, "sop_id": str, "incident_id": str }   ← INCIDENT mode
+  { "id": str, "sop_id": str, "alert_id": str }      ← ALERT mode
   { "id": str, "sop_id": str, "prompt": str }        ← PROMPT mode
 """
 

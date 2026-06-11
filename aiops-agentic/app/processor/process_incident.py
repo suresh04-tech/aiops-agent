@@ -32,7 +32,8 @@ import logging
 from datetime import datetime, timezone
 
 from app.utils.db import get_db
-from app.utils.aws_connector import AWSClientFactory
+from app.utils.aws_connector import AWSClientFactory, AWSAuthenticationError
+from app.utils.invocation_logger import get_rca_logger, invocation_log_context
 from app.agent.tools import (
     init_tools,
     resolve_incident_targets,
@@ -46,6 +47,7 @@ from app.agent.evaluators import (
 from app.agent.rules import WORKFLOW_STATES
 from app.agent.graph import run_agent_investigation
 
+# Module-level fallback logger (used by helpers called before the invocation logger is ready)
 logger = logging.getLogger(__name__)
 
 
@@ -55,7 +57,7 @@ logger = logging.getLogger(__name__)
 # LLM never calls this.
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def _update_status(incident_id: str, status: str, percent: int | None = None) -> None:
+def _update_status(incident_id: str, status: str, percent: int | None = None, message: str | None = None) -> None:
     """
     Update incident status in DB.  Only called by Python — never by LLM.
 
@@ -74,16 +76,30 @@ def _update_status(incident_id: str, status: str, percent: int | None = None) ->
     try:
         with get_db() as conn:
             with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    UPDATE meyiconnect.insight_incidents
-                    SET analysis_status  = %s,
-                        analysis_percent = %s,
-                        updated_at       = NOW()
-                    WHERE id = %s
-                    """,
-                    (status, pct, incident_id),
-                )
+                if message:
+                    analysis_result_json = json.dumps({"error": message})
+                    cur.execute(
+                        """
+                        UPDATE meyiconnect.insight_incidents
+                        SET analysis_status  = %s,
+                            analysis_percent = %s,
+                            analysis_result  = %s,
+                            updated_at       = NOW()
+                        WHERE id = %s
+                        """,
+                        (status, pct, analysis_result_json, incident_id),
+                    )
+                else:
+                    cur.execute(
+                        """
+                        UPDATE meyiconnect.insight_incidents
+                        SET analysis_status  = %s,
+                            analysis_percent = %s,
+                            updated_at       = NOW()
+                        WHERE id = %s
+                        """,
+                        (status, pct, incident_id),
+                    )
             conn.commit()
     except Exception as exc:
         logger.error(f"[StatusUpdate] Failed for {incident_id}: {exc}")
@@ -239,8 +255,8 @@ def _load_project_by_tag(project_tag: str) -> dict | None:
 def _validate_incident(incident: dict | None, incident_id: str) -> str | None:
     if not incident:
         return f"Incident {incident_id} not found in DB"
-    if not incident.get("incident_down_time"):
-        return f"Missing incident_down_time for {incident_id}"
+    if not incident.get("down_time"):
+        return f"Missing incident down_time for {incident_id}"
     return None
 
 
@@ -339,38 +355,44 @@ def process_incident(payload: dict) -> None:
     Process a single incident using the autonomous agentic investigation flow.
     Called by the worker thread pool with payload = {"incident_id": str}.
     """
-    logger.info("=" * 60)
-    logger.info("INCIDENT PROCESSOR v3 STARTED")
-    logger.info("=" * 60)
-
     incident_id = payload.get("incident_id", "unknown")
+
+    # ── Per-invocation file logger ─────────────────────────────────────────────
+    # Creates: logs/rca/rca-<incident_id>-<timestamp>.log  (max 10 retained)
+    base_log = get_rca_logger(incident_id)
+    ctx = invocation_log_context(base_log)
+    log = ctx.__enter__()
+
+    log.info("=" * 60)
+    log.info("INCIDENT PROCESSOR v3 STARTED")
+    log.info("=" * 60)
 
     try:
         # ── 1. Load & validate incident ───────────────────────────────────────
         incident = _load_incident(incident_id)
         error    = _validate_incident(incident, incident_id)
         if error:
-            logger.error(f"[Validate] {error}")
-            _update_status(incident_id, "failed")
+            log.error(f"[Validate] {error}")
+            _update_status(incident_id, "failed", message=error)
             return
         incident = dict(incident)
 
         # ── 2. Load project ───────────────────────────────────────────────────
         project_tag = incident.get("project_tag")
         if not project_tag:
-            logger.error(f"[Project] No project_tag on incident {incident_id}")
-            _update_status(incident_id, "failed")
+            log.error(f"[Project] No project_tag on incident {incident_id}")
+            _update_status(incident_id, "failed", message=f"No project_tag on incident {incident_id}")
             return
 
         project = _load_project_by_tag(project_tag)
         error   = _validate_project(project, project_tag, incident_id)
         if error:
-            logger.error(f"[Project] {error}")
-            _update_status(incident_id, "failed")
+            log.error(f"[Project] {error}")
+            _update_status(incident_id, "failed", message=error)
             return
         project = dict(project)
 
-        logger.info(
+        log.info(
             f"[Load] incident={incident_id} | "
             f"project='{project.get('name')}' tag={project_tag} | "
             f"region={project.get('aws_region')}"
@@ -402,21 +424,25 @@ def process_incident(payload: dict) -> None:
         }
 
         if not final_deps:
-            logger.error(f"[Validate] No dependencies for {incident_id}")
-            _update_status(incident_id, "failed")
+            log.error(f"[Validate] No dependencies for {incident_id}")
+            _update_status(incident_id, "failed", message=f"No dependencies for {incident_id}")
             return
 
         # ── 4. Build AWS factory ──────────────────────────────────────────────
         try:
             aws_factory = AWSClientFactory(project_tag=project_tag)
+        except AWSAuthenticationError as exc:
+            log.error(f"[AWS] Authentication error: {exc}")
+            _update_status(incident_id, "failed", message=str(exc))
+            return
         except ValueError as exc:
-            logger.error(f"[AWS] Factory init failed: {exc}")
-            _update_status(incident_id, "failed")
+            log.error(f"[AWS] Factory init failed: {exc}")
+            _update_status(incident_id, "failed", message=f"Factory init failed: {exc}")
             return
 
         # ── 5. Inject tools context ───────────────────────────────────────────
         init_tools(aws_factory=aws_factory, incident_row=investigation_context)
-        logger.info(f"[Tools] Initialised for {incident_id}")
+        log.info(f"[Tools] Initialised for {incident_id}")
 
         # ── 6. P4: triage_started ─────────────────────────────────────────────
         _update_status(incident_id, "triage_started")
@@ -438,7 +464,7 @@ def process_incident(payload: dict) -> None:
             limit=3,
         )
         if similar_incidents:
-            logger.info(f"[SimilarIncidents] Found {len(similar_incidents)} past incidents")
+            log.info(f"[SimilarIncidents] Found {len(similar_incidents)} past incidents")
 
         # ── 10. Update Status before Analysis ──────────────────────────────────
         _update_status(incident_id, "infra_analysis")
@@ -457,7 +483,7 @@ def process_incident(payload: dict) -> None:
                 incident_down_time=investigation_context["incident_down_time"],
             )
         except Exception as exc:
-            logger.warning(f"[Timeline] Pre-build failed: {exc}")
+            log.warning(f"[Timeline] Pre-build failed: {exc}")
 
         # ── 12. Run the agent ─────────────────────────────────────────────────
         result = run_agent_investigation(
@@ -471,10 +497,9 @@ def process_incident(payload: dict) -> None:
             alb_meta=alb_meta,
         )
 
-        structured  = result.get("structured_result")
-        structured  = result.get("structured_result")
+        structured = result.get("structured_result")
 
-        logger.info(
+        log.info(
             f"[Agent] Finished | "
             f"tool_calls={result.get('tool_call_count')} | "
             f"messages={result.get('message_count')} | "
@@ -488,17 +513,25 @@ def process_incident(payload: dict) -> None:
             _save_rca(incident_id, structured)   # also sets status=completed, percent=100
             _save_evidence(incident_id, result)
         else:
-            logger.error(f"[Agent] No structured result for {incident_id}.")
-            _update_status(incident_id, "failed")
+            log.error(f"[Agent] No structured result for {incident_id}.")
+            _update_status(incident_id, "failed", message=f"No structured result for {incident_id}.")
 
-        logger.info("=" * 60)
-        logger.info(f"INCIDENT COMPLETED: {incident_id}")
-        logger.info("=" * 60)
+        log.info("=" * 60)
+        log.info(f"INCIDENT COMPLETED: {incident_id}")
+        log.info("=" * 60)
 
-    except Exception:
-        logger.exception(f"[Fatal] process_incident failed for {incident_id}")
+    except AWSAuthenticationError as exc:
+        log.error(f"[AWS] Authentication error during incident {incident_id}: {exc}")
         try:
-            _update_status(incident_id, "failed")
+            _update_status(incident_id, "failed", message=str(exc))
         except Exception:
-            logger.exception("[Fatal] Could not update status to failed")
+            log.exception("[Fatal] Could not update status to failed")
+    except Exception as exc:
+        log.exception(f"[Fatal] process_incident failed for {incident_id}")
+        try:
+            _update_status(incident_id, "failed", message=f"Fatal error: {exc}")
+        except Exception:
+            log.exception("[Fatal] Could not update status to failed")
         raise
+    finally:
+        ctx.__exit__(None, None, None)

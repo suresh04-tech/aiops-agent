@@ -4,11 +4,14 @@ app/sop/process_sop.py
 Orchestrator for SOP generation — direct Markdown pipeline.
 
 Pipeline:
-  INCIDENT mode:
+  ALERT mode:
     load context → LLM → extract metadata → save DB
 
   PROMPT mode:
+    entity extraction  (regex, zero tokens)
+      → resolve entities against DB (alert / source / project)
     guardrail check (Layer 1→2→3, zero tokens)
+      → SKIP if at least one entity resolved (prompt has validated DB context)
       → FAIL: mark invalid_prompt, store message, return
       → PASS: LLM → extract metadata → save DB
 
@@ -30,7 +33,10 @@ from app.sop.generator import (
     SOP_BEDROCK_MODEL,
 )
 from app.sop.guardrails import validate_sop_prompt
+from app.sop.entity_resolver import extract_entities, resolve_entities, ResolvedEntities
+from app.utils.invocation_logger import get_sop_logger, invocation_log_context
 
+# Module-level fallback logger
 logger = logging.getLogger(__name__)
 
 
@@ -85,6 +91,13 @@ def _save_sop_content(
     alert_type: str,
     service: str,
     severity: str,
+    # ── Entity resolution fields (PROMPT mode) ──────────────────────────
+    alert_id:   str | None = None,
+    alert_name: str | None = None,
+    source_id:  str | None = None,
+    source:     str | None = None,
+    project_id: str | None = None,
+    project:    str | None = None,
 ) -> None:
     allowed  = {"Critical", "High", "Medium", "Low"}
     if severity not in allowed:
@@ -107,13 +120,23 @@ def _save_sop_content(
                         severity      = %s,
                         ai_model_used = %s,
                         status        = 'completed',
-                        updated_at    = NOW()
+                        updated_at    = NOW(),
+                        alert_id      = %s,
+                        alert_name    = %s,
+                        source_id     = %s,
+                        source        = %s,
+                        project_id    = %s,
+                        project       = %s
                     WHERE id = %s
                     """,
                     (
                         content_md, overview, title,
                         alert_type, service, severity,
-                        SOP_BEDROCK_MODEL, db_id,
+                        SOP_BEDROCK_MODEL,
+                        alert_id, alert_name,
+                        source_id, source,
+                        project_id, project,
+                        db_id,
                     ),
                 )
                 logger.info(f"[SOP-Save] Updated {cur.rowcount} row(s) for db_id={db_id}")
@@ -123,44 +146,44 @@ def _save_sop_content(
         raise
 
 
-def _load_incident_with_rca(incident_id: str) -> tuple[dict | None, dict | None, dict]:
-    try:
-        with get_db() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    "SELECT * FROM meyiconnect.insight_incidents WHERE id = %s LIMIT 1",
-                    (incident_id,),
-                )
-                row = cur.fetchone()
-                cur.execute(
-                    "SELECT * FROM meyiconnect.incident_evidence WHERE incident_id = %s LIMIT 1",
-                    (incident_id,),
-                )
-                ev_row = cur.fetchone()
+# def _load_incident_with_rca(incident_id: str) -> tuple[dict | None, dict | None, dict]:
+    # try:
+    #     with get_db() as conn:
+    #         with conn.cursor() as cur:
+    #             cur.execute(
+    #                 "SELECT * FROM meyiconnect.insight_incidents WHERE id = %s LIMIT 1",
+    #                 (incident_id,),
+    #             )
+    #             row = cur.fetchone()
+    #             cur.execute(
+    #                 "SELECT * FROM meyiconnect.incident_evidence WHERE incident_id = %s LIMIT 1",
+    #                 (incident_id,),
+    #             )
+    #             ev_row = cur.fetchone()
 
-        if not row:
-            logger.warning(f"[SOP-Load] Incident {incident_id} not found")
-            return None, None, {}
+    #     if not row:
+    #         logger.warning(f"[SOP-Load] Incident {incident_id} not found")
+    #         return None, None, {}
 
-        incident      = dict(row)
-        evidence_data = dict(ev_row) if ev_row else {}
+    #     incident      = dict(row)
+    #     evidence_data = dict(ev_row) if ev_row else {}
 
-        raw = incident.get("analysis_result")
-        if isinstance(raw, str):
-            try:
-                rca_result = json.loads(raw)
-            except Exception:
-                rca_result = {}
-        elif isinstance(raw, dict):
-            rca_result = raw
-        else:
-            rca_result = {}
+    #     raw = incident.get("analysis_result")
+    #     if isinstance(raw, str):
+    #         try:
+    #             rca_result = json.loads(raw)
+    #         except Exception:
+    #             rca_result = {}
+    #     elif isinstance(raw, dict):
+    #         rca_result = raw
+    #     else:
+    #         rca_result = {}
 
-        return incident, rca_result, evidence_data
+    #     return incident, rca_result, evidence_data
 
-    except Exception as exc:
-        logger.error(f"[SOP-Load] DB error for incident {incident_id}: {exc}")
-        return None, None, {}
+    # except Exception as exc:
+    #     logger.error(f"[SOP-Load] DB error for incident {incident_id}: {exc}")
+    #     return None, None, {}
 
 
 def _load_alert_with_historical_rca(alert_id: str) -> tuple[dict | None, dict[str, dict]]:
@@ -362,37 +385,43 @@ def process_sop(payload: dict) -> None:
     Full SOP generation pipeline.
 
     Payload (internal, built by the API route):
-      { "id": db_id, "sop_id": "SOP-201", "incident_id": "<uuid>" }   ← INCIDENT
+      { "id": db_id, "sop_id": "SOP-201", "alert_id": "<uuid>" }      ← ALERT
       { "id": db_id, "sop_id": "SOP-201", "prompt": "<text>" }        ← PROMPT
     """
-    logger.info("=" * 60)
-    logger.info("SOP PROCESSOR STARTED")
-    logger.info("=" * 60)
-
     db_id       = payload.get("id")
     sop_id      = payload.get("sop_id", "unknown")
     alert_id    = payload.get("alert_id")
     user_prompt = payload.get("prompt")
 
+    # ── Per-invocation file logger ─────────────────────────────────────────────
+    # Creates: logs/sop/sop-<sop_id>-<timestamp>.log  (max 10 retained)
+    base_log = get_sop_logger(sop_id)
+    ctx = invocation_log_context(base_log)
+    log = ctx.__enter__()
+
+    log.info("=" * 60)
+    log.info("SOP PROCESSOR STARTED")
+    log.info("=" * 60)
+
     if not db_id:
-        logger.error("[SOP] db_id missing from payload — cannot update status")
+        log.error("[SOP] db_id missing from payload — cannot update status")
         return
 
     if not alert_id and not user_prompt:
-        logger.error(f"[SOP] db_id={db_id}: payload must have alert_id OR prompt")
+        log.error(f"[SOP] db_id={db_id}: payload must have alert_id OR prompt")
         _update_sop_status(db_id, "failed")
         return
 
     try:
         # ── MODE A: Alert-based (no guardrail — context from DB) ──────────
         if alert_id:
-            logger.info(f"[SOP] Mode=ALERT db_id={db_id} alert_id={alert_id}")
+            log.info(f"[SOP] Mode=ALERT db_id={db_id} alert_id={alert_id}")
             _update_sop_status(db_id, "generating")
 
             current_alert, historical_context = _load_alert_with_historical_rca(alert_id)
 
             if current_alert is None:
-                logger.error(f"[SOP] Alert {alert_id} not found — aborting")
+                log.error(f"[SOP] Alert {alert_id} not found — aborting")
                 _update_sop_status(db_id, "failed")
                 return
 
@@ -415,25 +444,44 @@ def process_sop(payload: dict) -> None:
 
         # ── MODE B: Prompt-based ───────────────────────────────────────────
         else:
-            logger.info(f"[SOP] Mode=PROMPT db_id={db_id} prompt_len={len(user_prompt)}")
+            log.info(f"[SOP] Mode=PROMPT db_id={db_id} prompt_len={len(user_prompt)}")
 
-            # ── Guardrail check (zero tokens) ──────────────────────────────
-            guard = validate_sop_prompt(user_prompt)
-            guard.log(prompt_snippet=user_prompt)
+            # ── Step 1: Entity extraction (regex, zero tokens) ─────────────
+            log.info("[SOP-Entity] Extracting entities from prompt…")
+            raw_entities = extract_entities(user_prompt)
+            log.info(f"[SOP-Entity] Extracted: {raw_entities}")
 
-            if not guard.passed:
-                # Block before any Bedrock call — no token cost, no status=generating
-                logger.warning(
-                    f"[SOP-Guardrail] BLOCKED db_id={db_id} "
-                    f"layer={guard.detail.get('layer', '?')} "
-                    f"rule={guard.detail.get('rule', guard.detail.get('has_infra', '?'))}"
+            # ── Step 2: Entity resolution (DB lookups) ─────────────────────
+            resolved: ResolvedEntities = resolve_entities(raw_entities, prompt=user_prompt)
+            log.info(f"[SOP-Entity] Resolved: {resolved.as_log_dict()}")
+
+            # ── Step 3: Guardrail check ────────────────────────────────────
+            # Bypass guardrail when at least one entity resolved against the DB
+            # (the prompt has validated context — no need to enforce keyword rules).
+            if resolved.any_resolved:
+                log.info(
+                    f"[SOP-Guardrail] SKIPPED db_id={db_id} — "
+                    f"entity resolved (alert_id={resolved.alert_id} "
+                    f"source_id={resolved.source_id} project_id={resolved.project_id})"
                 )
-                _mark_invalid_prompt(db_id, guard.message)
-                return
+            else:
+                guard = validate_sop_prompt(user_prompt)
+                guard.log(prompt_snippet=user_prompt)
 
-            # ── Guardrail passed — mark generating and call LLM ───────────
+                if not guard.passed:
+                    # Block before any Bedrock call — no token cost, no status=generating
+                    log.warning(
+                        f"[SOP-Guardrail] BLOCKED db_id={db_id} "
+                        f"layer={guard.detail.get('layer', '?')} "
+                        f"rule={guard.detail.get('rule', guard.detail.get('has_infra', '?'))}"
+                    )
+                    _mark_invalid_prompt(db_id, guard.message)
+                    return
+
+                log.info(f"[SOP-Guardrail] PASSED db_id={db_id} score={guard.detail}")
+
+            # ── Step 4: Mark generating and call LLM ──────────────────────
             _update_sop_status(db_id, "generating")
-            logger.info(f"[SOP-Guardrail] PASSED db_id={db_id} score={guard.detail}")
 
             fallback_severity = "Medium"
             alert_type        = ""
@@ -453,10 +501,24 @@ def process_sop(payload: dict) -> None:
         if not alert_type:
             alert_type = _extract_metadata_field(content_md, "Alert Type")
 
-        logger.info(
+        log.info(
             f"[SOP-Meta] title='{title}' severity={severity} "
             f"alert_type='{alert_type}' service='{service}'"
         )
+
+        # Build entity kwargs — only populated for PROMPT mode
+        entity_kwargs: dict = {}
+        if user_prompt:   # PROMPT mode — resolved is always assigned above
+            entity_kwargs = {
+                "alert_id":   resolved.alert_id,
+                "alert_name": resolved.alert_name,
+                "source_id":  resolved.source_id,
+                "source":     resolved.source,
+                "project_id": resolved.project_id,
+                "project":    resolved.project,
+            }
+            log.info(f"[SOP-Entity] Storing entity fields: {entity_kwargs}")
+
 
         _save_sop_content(
             db_id=db_id,
@@ -465,16 +527,19 @@ def process_sop(payload: dict) -> None:
             alert_type=alert_type,
             service=service,
             severity=severity,
+            **entity_kwargs,
         )
 
-        logger.info("=" * 60)
-        logger.info(f"SOP COMPLETED: db_id={db_id} title='{title}' severity={severity}")
-        logger.info("=" * 60)
+        log.info("=" * 60)
+        log.info(f"SOP COMPLETED: db_id={db_id} title='{title}' severity={severity}")
+        log.info("=" * 60)
 
     except Exception:
-        logger.exception(f"[SOP-Fatal] process_sop failed for db_id={db_id}")
+        log.exception(f"[SOP-Fatal] process_sop failed for db_id={db_id}")
         try:
             _update_sop_status(db_id, "failed")
         except Exception:
             logger.exception("[SOP-Fatal] Could not update status to failed")
         raise
+    finally:
+        ctx.__exit__(None, None, None)

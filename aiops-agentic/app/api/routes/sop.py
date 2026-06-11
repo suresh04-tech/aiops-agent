@@ -5,8 +5,8 @@ Public /sop endpoints.
 
 POST /sop/enqueue
     Two payload shapes accepted:
-      { "sop_id": "SOP-201", "alert_id": "abc-123" }      ← ALERT mode
-      { "sop_id": "SOP-201", "prompt": "We run a ..." }   ← PROMPT mode
+      { "id": "<uuid>", "alert_id": "abc-123" }      ← ALERT mode
+      { "id": "<uuid>", "prompt": "We run a ..." }   ← PROMPT mode
 
     Creates the SOP row in DB (status=pending) then enqueues generation job.
     Returns 202 immediately — generation happens in the background worker.
@@ -37,7 +37,7 @@ start = time.time()
 # ── Request schemas ────────────────────────────────────────────────────────────
 
 class SopEnqueueRequest(BaseModel):
-    sop_id:      str
+    id:          str
     alert_id:    Optional[str] = None
     prompt:      Optional[str] = None
 
@@ -90,15 +90,15 @@ async def enqueue_sop(body: SopEnqueueRequest):
     """
     alert_id    = body.alert_id.strip() if body.alert_id else None
     user_prompt = body.prompt.strip()   if body.prompt   else None
-    req_sop_id  = body.sop_id.strip()
+    req_db_id   = body.id.strip()
 
     mode = "alert" if alert_id else "prompt"
 
     # Verify the row exists and fetch the human-readable sop_id
     try:
-        row = _get_sop_row(req_sop_id)
+        row = _get_sop_row(req_db_id)
         if not row:
-            raise HTTPException(status_code=404, detail=f"SOP record {req_sop_id} not found.")
+            raise HTTPException(status_code=404, detail=f"SOP record {req_db_id} not found.")
         
         db_id = str(row["id"])
         sop_id_str = row["sop_id"]

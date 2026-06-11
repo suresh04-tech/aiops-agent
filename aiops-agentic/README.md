@@ -1,136 +1,128 @@
-# AIOps Agentic Incident Investigation
+# AIOps Agentic Incident Investigation & SOP Generation
 
-Autonomous AWS incident root cause analysis using a LangGraph ReAct agent with Bedrock Claude.
+This repository contains two core agentic workflows built with LangGraph, FastAPI, and Amazon Bedrock (Claude):
+1. **Autonomous Incident Root Cause Analysis (RCA)** 
+2. **Dynamic SOP / Runbook Generation**
 
-## What changed from the MVP
+---
 
-| | MVP (before) | Agentic (now) |
-|--|--|--|
-| **AI approach** | One giant prompt → one Bedrock call | ReAct agent decides what to investigate next |
-| **Investigation** | Fixed pipeline, always same steps | Adaptive — agent adjusts based on evidence |
-| **Accuracy** | LLM overwhelmed by massive context | LLM sees focused, relevant data at each step |
-| **Transparency** | Black box single response | Full tool call history logged per incident |
-| **Extensibility** | Add to prompt template | Add a new `@tool` function |
+## 1. Agentic Root Cause Analysis (RCA)
+
+An autonomous AWS incident investigator powered by a LangGraph ReAct agent. Instead of relying on a static pipeline or a single massive prompt, the agent intelligently navigates through AWS infrastructure to find the root cause of an incident.
+
+### How it works
+- **Dynamic Investigation**: The agent is given an `incident_id` and decides which tools to call based on the evolving context.
+- **Rich Toolset**: Equipped with multiple custom-built AWS tools to query EC2 state, CloudWatch metrics, CloudTrail logs, ALB targets, Security Group rules, and perform deep Network Path investigations.
+- **Causal Reasoning**: The LLM analyzes the output of each tool, reasons about the failure path, and continues investigating until it can definitively prove the root cause.
+- **Evidence-Backed**: The final output includes the probable root cause, confidence score, direct evidence quotes, dependency impacts, and exact remediation commands.
+
+### Available Agent Tools
+| Tool | Description |
+|---|---|
+| `get_incident_context` | Load initial incident details from the database |
+| `resolve_incident_targets` | Map dependencies (EC2 / ALB / Domain) to concrete instance lists |
+| `get_ec2_details` | Retrieve instance state, status checks, and tags |
+| `get_ec2_metrics` | Fetch CPU, memory, disk, network, and status check metrics |
+| `get_compressed_logs` | Extract and compress relevant logs using anchor-based search |
+| `get_infra_events` | Query CloudTrail for deployments, IAM changes, and network updates |
+| `investigate_network_path` | Analyze DNS, Route Tables, NACLs, and Security Groups for blocked traffic |
+| `get_security_group_rules` | Fetch detailed inbound/outbound rules for a specific SG |
+| `check_cloudtrail_sg_changes` | Audit who modified a Security Group and exactly what rules were changed |
+| `get_alb_target_health` | Snapshot ALB target health status |
+| `query_logs_insights` | Execute targeted CloudWatch Logs Insights queries |
+| `correlate_instances` | Cross-instance comparison to detect shared vs. isolated failures |
+| `update_investigation_status` | Push live progress updates to the frontend |
+| `store_raw_evidence` | Save collected evidence to the database |
+| `store_rca_result` | Write the final RCA conclusion and remediation steps |
+
+---
+
+## 2. Dynamic SOP / Runbook Generation
+
+A dedicated pipeline for generating production-grade, Markdown-formatted Standard Operating Procedures (SOPs).
+
+### Two Generation Modes
+
+1. **Alert-Based Flow (Automated Context)**
+   - **Trigger**: Receives an `alert_id`.
+   - **Enrichment**: Automatically scans the database for historical incidents linked to similar alerts. 
+   - **Context Merge**: Collects and merges historical Root Cause Analyses (RCAs), deep investigation findings, and raw evidence.
+   - **Output**: Generates a highly tailored SOP incorporating known failure modes, verified remediation steps, and historical context—without hitting token limits.
+
+2. **Prompt-Based Flow (Free-Form)**
+   - **Trigger**: Receives a free-form user `prompt` describing their architecture and the issue.
+   - **Guardrails**: Intercepts prompts using an intelligent 3-layer guardrail system (Off-Topic, Context-Length, and Infra-Relevance) to block invalid requests before incurring LLM costs.
+   - **Output**: Generates a general, best-practice SOP matching the described technology stack.
+
+---
 
 ## Architecture
 
-```
-POST /queue/enqueue {"incident_id": "123"}
-       │
-       ▼
-  QueueManager (asyncio.Queue)
-       │
-       ▼
-  Worker (ThreadPoolExecutor)
-       │
-       ▼
-  process_incident(payload)
-       │
-       ├─ Load incident from DB
-       ├─ Build AWSClientFactory (creds from connector)
-       ├─ init_tools(factory, incident_row)
-       │
-       └─ run_agent_investigation()
-              │
-              ▼
-         LangGraph ReAct Loop
-         ┌──────────────────────────────────────────────────┐
-         │  agent_node (Claude via Bedrock)                  │
-         │    ↓ decides which tool to call                   │
-         │  tool_node executes ONE tool                      │
-         │    ↓ returns result to agent                      │
-         │  agent_node observes result, reasons, decides...  │
-         │    ↓ loop until agent calls store_rca_result()    │
-         └──────────────────────────────────────────────────┘
-              │
-              └─ Results stored in DB by agent itself
+Both workflows operate asynchronously using background workers and an in-process queue to ensure the FastAPI server remains non-blocking.
+
+```text
+POST /queue/enqueue (RCA)  ──► queue_manager     ──► process_incident() ──► LangGraph ReAct Loop
+POST /sop/enqueue   (SOP)  ──► sop_queue_manager ──► process_sop()      ──► Bedrock LLM Generation
 ```
 
-## Available agent tools
+### Project Structure
 
-| Tool                                  | What it does                                                |
-|---------------------------------------|-------------------------------------------------------------|
-| `get_incident_context`                | Load incident details from DB                               |
-| `resolve_incident_targets`            | EC2 / ALB → concrete instance list                          |
-| `get_ec2_details`                     | Instance state, status checks, tags                         |
-| `get_ec2_metrics`                     | CPU, disk, network, status_check_failed                     |
-| `get_compressed_logs`                 | Full log pipeline: anchor → 3-stage → weighted compression  |
-| `get_infra_events`                    | CloudTrail: deployments, IAM, network changes               |
-| `get_alb_target_health`               | ALB target health snapshot                                  |
-| `query_logs_insights`                 | Drill into specific log patterns                            |
-| `correlate_instances`                 | Cross-instance comparison and scenario detection            |
-| `update_investigation_status`         | Live progress updates to frontend                           |
-| `store_raw_evidence`                  | Write EC2/metrics/logs to incident_logs table               |
-| `store_rca_result`                    | Write final RCA and remediation to incident table           |
-
-## Project structure
-
-```
+```text
 app/
-├── agent/
-│   ├── tools.py          ← 12 AWS investigation tools
-│   ├── graph.py          ← LangGraph ReAct agent
-│   └── prompts.py        ← Agent system prompt
-├── processor/
-│   ├── process_incident.py  ← Entry point (now just boots the agent)
-│   ├── worker.py            ← Unchanged
-│   ├── dependency_resolver.py  ← Unchanged (called via tool)
-│   ├── log_processor.py        ← Unchanged (called via tool)
-│   ├── correlation_engine.py   ← Unchanged (called via tool)
-│   └── Cloudtrail_processor.py ← Unchanged (called via tool)
-├── queue/
-│   └── manager.py        ← Unchanged
-├── api/
-│   └── routes/queue.py   ← Unchanged
-├── utils/
-│   ├── aws_connector.py  ← Unchanged
-│   └── db.py             ← Unchanged
-└── main.py               ← Unchanged
+├── agent/                # LangGraph ReAct agent and RCA tools
+├── api/                  # FastAPI routes (/queue, /sop)
+├── processor/            # RCA orchestrator and specialized infra processors
+├── sop/                  # SOP generator, prompt guardrails, and context loaders
+├── queue/                # Asyncio queue managers
+├── utils/                # DB and AWS clients
+└── main.py               # FastAPI application entry point
 ```
 
-## Setup
+---
 
+## Setup & Execution
+
+### 1. Requirements & Configuration
 ```bash
-# 1. Install deps
 pip install -r requirements.txt
-
-# 2. Configure environment
 cp .env.example .env
-# Edit .env with your DB and AWS credentials
+# Configure DB credentials and AWS settings in .env
+```
 
-# 3. Run
+### 2. Run the Service
+```bash
 docker compose up
-# or locally:
+# Or locally:
 uvicorn app.main:app --reload
+```
 
-# 4. Trigger an investigation
+### 3. Trigger Jobs
+**Trigger an RCA Investigation:**
+```bash
 curl -X POST http://localhost:8000/queue/enqueue \
   -H "Content-Type: application/json" \
   -d '{"incident_id": "your-incident-id"}'
+```
 
-# 5. Monitor progress
+**Trigger an Alert-based SOP:**
+```bash
+curl -X POST http://localhost:8000/sop/enqueue \
+  -H "Content-Type: application/json" \
+  -d '{"sop_id": "SOP-123", "alert_id": "your-alert-id"}'
+```
+
+**Trigger a Prompt-based SOP:**
+```bash
+curl -X POST http://localhost:8000/sop/enqueue \
+  -H "Content-Type: application/json" \
+  -d '{"sop_id": "SOP-124", "prompt": "We run a Python FastAPI app on ECS..."}'
+```
+
+### 4. Monitor
+Check queue depth and service health:
+```bash
 curl http://localhost:8000/health
 ```
-
-## Model selection
-
-Best results with Claude 3 Sonnet or Claude 3.5 Sonnet (supports tool calling + long reasoning).
-Set `BEDROCK_MODEL_ID` in `.env`:
-
-```
-# Best accuracy
-BEDROCK_MODEL_ID=anthropic.claude-3-5-sonnet-20241022-v2:0
-
-# Good balance (default)
-BEDROCK_MODEL_ID=anthropic.claude-3-sonnet-20240229-v1:0
-
-# Fastest (less thorough)
-BEDROCK_MODEL_ID=anthropic.claude-3-haiku-20240307-v1:0
-```
-
-## DB schema (unchanged)
-
-The agent reads from and writes to the same tables as before:
-- `meyiconnect.insight_incidents` — incident record with analysis results
-- `meyiconnect.incident_logs`     — raw EC2/metrics/log evidence
-- `meyiconnect.insight_connectors` — AWS credentials per connector
+Logs are automatically routed and rotated:
+- `logs/aiops.log` (RCA and general operations)
+- `logs/sop.log` (Dedicated SOP generation logs)
