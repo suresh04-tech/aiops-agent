@@ -3,13 +3,13 @@ processor/log_processor.py
 ──────────────────────────
 Production-grade multi-log-group CloudWatch fetching for EC2 RCA.
 
-Only one timestamp is required as input: incident_down_time.
+Only one timestamp is required as input: down_time.
 Everything else is derived automatically from the logs themselves.
 
 Full Pipeline
 ─────────────
 Phase A  — Wide Error Scan (paginated)
-    Scan the adaptive window around incident_down_time across all log groups
+    Scan the adaptive window around down_time across all log groups
     in parallel.  Uses full nextToken pagination so NO log is dropped due to
     CW API truncation.
 
@@ -302,7 +302,7 @@ def _fetch_paginated(logs_client, log_group: str,
 
 def compute_adaptive_window(severity: str, issue: str) -> dict:
     """
-    Decide how far before/after incident_down_time to scan.
+    Decide how far before/after down_time to scan.
 
     Memory leaks / disk fills → symptoms 30-60 min before detection.
     DB pool exhaustion        → 10-20 min before.
@@ -842,7 +842,7 @@ def _tag_clusters_with_cascade(clusters: list[dict],
 def fetch_and_compress_logs(
     logs_client,
     log_groups:          list[str],
-    incident_down_time:  datetime,
+    down_time:  datetime,
     severity:            str = "medium",
     issue:               str = "",
     dependency_context:  dict | None = None,
@@ -854,7 +854,7 @@ def fetch_and_compress_logs(
     Args:
         logs_client          boto3 CloudWatch Logs client
         log_groups           CW log group names (user-supplied via UI)
-        incident_down_time   moment Pulse detected the health check failure
+        down_time   moment Pulse detected the health check failure
         severity             incident severity ("critical", "high", …)
         issue                free-text issue description
         dependency_context   optional service dependency graph from DB
@@ -867,15 +867,15 @@ def fetch_and_compress_logs(
     log_groups = [g for g in log_groups if g]
     if not log_groups:
         logger.warning("No log groups — skipping log fetch")
-        return _empty_result(incident_down_time)
+        return _empty_result(down_time)
 
     # ── Adaptive window ────────────────────────────────────────────────────────
     adaptive   = compute_adaptive_window(severity, issue)
-    scan_start = incident_down_time - timedelta(minutes=adaptive["before_minutes"])
-    scan_end   = incident_down_time + timedelta(minutes=adaptive["after_minutes"])
+    scan_start = down_time - timedelta(minutes=adaptive["before_minutes"])
+    scan_end   = down_time + timedelta(minutes=adaptive["after_minutes"])
 
     logger.info(
-        f"[Start] down_time={incident_down_time.strftime('%H:%M:%S')} | "
+        f"[Start] down_time={down_time.strftime('%H:%M:%S')} | "
         f"window=-{adaptive['before_minutes']}min/+{adaptive['after_minutes']}min | "
         f"groups={log_groups}"
     )
@@ -886,10 +886,10 @@ def fetch_and_compress_logs(
     logger.info(f"[Phase-A] {len(all_error_events)} total error events")
 
     # ── Phase B ────────────────────────────────────────────────────────────────
-    anchor = _anchor_true_start(phase_a_results, incident_down_time, scan_start)
+    anchor = _anchor_true_start(phase_a_results, down_time, scan_start)
 
     # ── Phase C ────────────────────────────────────────────────────────────────
-    stages = _build_stages(anchor, incident_down_time)
+    stages = _build_stages(anchor, down_time)
     logger.info(
         "[Timeline Stages]\n" +
         "\n".join(
@@ -995,12 +995,12 @@ def fetch_and_compress_logs(
     }
 
 
-def _empty_result(incident_down_time: datetime) -> dict:
+def _empty_result(down_time: datetime) -> dict:
     return {
         "adaptive_window": {"before_minutes": DEFAULT_SCAN_BEFORE_MINUTES,
                             "after_minutes":  DEFAULT_SCAN_AFTER_MINUTES},
         "anchor": {
-            "true_start": incident_down_time.isoformat(),
+            "true_start": down_time.isoformat(),
             "first_error_ts": None, "first_error_msg": "",
             "first_error_group": "", "first_error_weight": 0,
         },

@@ -115,6 +115,8 @@ class AgentState(TypedDict):
     rca_signals:     dict
     resolved_targets: list[dict]
     alb_meta:        dict
+    ec2_analysis:    dict   # pre-fetched EC2 state / metrics / status checks
+    alb_health:      dict   # pre-fetched ALB per-target-group health
     investigation_state: dict
     evidence: list[str]
     investigation_findings: list[dict]
@@ -222,7 +224,6 @@ def tool_node(state: AgentState) -> dict:
         if incident_id:
             from app.processor.process_incident import _update_status
             _STATUS_MAP = {
-                "get_ec2_analysis":             ("infra_analysis", WORKFLOW_STATES["infra_analysis"]),
                 "get_compressed_logs":          ("logs_analysis",  WORKFLOW_STATES["logs_analysis"]),
                 "correlate_instances":          ("ai_reasoning",   WORKFLOW_STATES["ai_reasoning"]),
                 "get_infra_events":             ("infra_analysis",  WORKFLOW_STATES["infra_analysis"]),
@@ -233,48 +234,33 @@ def tool_node(state: AgentState) -> dict:
                 status, pct = _STATUS_MAP[tool_name]
                 _update_status(incident_id, status, pct)
 
-        if tool_name == "resolve_incident_targets" and state.get("resolved_targets"):
-            logger.info("[ToolNode] Skipping resolve_incident_targets tool (using pre-resolved cache)")
-            result = {
-                "targets": state.get("resolved_targets", []),
-                "alb_meta": state.get("alb_meta", {}),
-                "_cached": True
-            }
-            result_content = json.dumps(result, default=str)
-            # Accumulate RCA signals just in case, though they were pre-extracted already
-            _accumulate_alb_signals(result, rca_signals)
+        tool_fn = _TOOL_MAP.get(tool_name)
+        if tool_fn is None:
+            result_content = json.dumps({"error": f"Unknown tool: {tool_name}"})
         else:
-            tool_fn = _TOOL_MAP.get(tool_name)
-            if tool_fn is None:
-                result_content = json.dumps({"error": f"Unknown tool: {tool_name}"})
-            else:
-                try:
-                    result         = tool_fn.invoke(tool_args)
-                    result_content = json.dumps(result, default=str)
+            try:
+                result         = tool_fn.invoke(tool_args)
+                result_content = json.dumps(result, default=str)
 
-                    # Accumulate RCA signals from tool results
-                    if tool_name == "get_ec2_analysis":
-                        _accumulate_ec2_signals(result, rca_signals)
-                    elif tool_name == "get_compressed_logs":
-                        _accumulate_log_signals(result, rca_signals)
-                    elif tool_name == "resolve_incident_targets":
-                        _accumulate_alb_signals(result, rca_signals)
-                    elif tool_name == "investigate_network_path":
-                        _accumulate_network_signals(result, rca_signals)
-                    elif tool_name == "check_cloudtrail_sg_changes":
-                        _accumulate_cloudtrail_sg_signals(result, rca_signals)
+                # Accumulate RCA signals from tool results
+                if tool_name == "get_compressed_logs":
+                    _accumulate_log_signals(result, rca_signals)
+                elif tool_name == "investigate_network_path":
+                    _accumulate_network_signals(result, rca_signals)
+                elif tool_name == "check_cloudtrail_sg_changes":
+                    _accumulate_cloudtrail_sg_signals(result, rca_signals)
 
-                    # Accumulate generic findings
-                    for finding in result.get("findings", []):
-                        if "message" in finding:
-                            evidence.append(finding["message"])
-                        investigation_findings.append(finding)
-                        if "category" in finding:
-                            investigation_state[f"{finding['category']}_validated"] = True
+                # Accumulate generic findings
+                for finding in result.get("findings", []):
+                    if "message" in finding:
+                        evidence.append(finding["message"])
+                    investigation_findings.append(finding)
+                    if "category" in finding:
+                        investigation_state[f"{finding['category']}_validated"] = True
 
-                except Exception as exc:
-                    logger.error(f"[ToolNode] {tool_name} raised: {exc}")
-                    result_content = json.dumps({"error": str(exc)})
+            except Exception as exc:
+                logger.error(f"[ToolNode] {tool_name} raised: {exc}")
+                result_content = json.dumps({"error": str(exc)})
 
         logger.info(f"[ToolNode] {tool_name} result: {result_content}...")
         logger.info(f"[ToolNode] {tool_name} full result sent to LLM: {result_content}")
@@ -683,6 +669,8 @@ def _build_initial_human_message(
     timeline:         dict | None,
     similar_incidents: list[dict],
     resolved_targets:  list[dict] | None = None,
+    ec2_analysis:      dict | None = None,
+    alb_health:        dict | None = None,
 ) -> str:
     lines = [
         "## Incident Investigation Context",
@@ -690,7 +678,7 @@ def _build_initial_human_message(
         f"**Incident ID:** {incident_context.get('incident_id')}",
         f"**Monitor:** {incident_context.get('monitor_name')} ({incident_context.get('monitor_type')})",
         f"**Down Message:** {incident_context.get('down_message')}",
-        f"**Down Time:** {incident_context.get('incident_down_time')}",
+        f"**Down Time:** {incident_context.get('down_time')}",
         f"**AWS Region:** {incident_context.get('aws_region')}",
         f"**Monitor URL:** {incident_context.get('monitor_url', 'N/A')}",
         "",
@@ -713,9 +701,47 @@ def _build_initial_human_message(
     if resolved_targets:
         lines += [
             "## Resolved Targets",
-            "Resolved targets are already available in state.",
-            "Do NOT call resolve_incident_targets unless resolved_targets is empty.",
             json.dumps(resolved_targets, indent=2),
+            "",
+        ]
+
+    # ── Pre-fetched EC2 state (embedded so LLM never needs to call get_ec2_analysis) ──
+    if ec2_analysis and ec2_analysis.get("instances"):
+        lines += [
+            "## Pre-Fetched EC2 Infrastructure State",
+            "> This data was collected before your first reasoning turn.",
+            "> Do NOT call get_ec2_analysis — all EC2 data is already here.",
+            "",
+        ]
+        for iid, data in ec2_analysis["instances"].items():
+            details = data.get("details", {})
+            checks  = data.get("status_checks", {})
+            metrics = data.get("metrics", {})
+            lines += [
+                f"### Instance: {iid}",
+                f"- **State:** {details.get('state', 'unknown')}",
+                f"- **Type:** {details.get('instance_type', 'N/A')}  |  **AZ:** {details.get('availability_zone', 'N/A')}",
+                f"- **Private IP:** {details.get('private_ip', 'N/A')}  |  **Public IP:** {details.get('public_ip', 'N/A')}",
+                f"- **VPC:** {details.get('vpc_id', 'N/A')}  |  **Subnet:** {details.get('subnet_id', 'N/A')}",
+                f"- **Security Groups:** {json.dumps([sg.get('id') for sg in details.get('security_groups', [])])}",
+                f"- **Instance Status:** {checks.get('instance_status', 'N/A')}  |  **System Status:** {checks.get('system_status', 'N/A')}",
+                f"- **CPU (avg {metrics.get('window_minutes', 15)}m):** {metrics.get('cpu_percent', 'N/A')}%",
+                f"- **NetworkIn:** {metrics.get('network_in_bytes', 'N/A')} bytes  |  **NetworkOut:** {metrics.get('network_out_bytes', 'N/A')} bytes",
+                f"- **StatusCheckFailed (sum):** {metrics.get('status_check_failed', 'N/A')}",
+                "",
+            ]
+
+    # ── Pre-fetched ALB health (embedded so LLM never needs to call get_alb_target_health) ──
+    if alb_health and alb_health.get("targets"):
+        lines += [
+            "## Pre-Fetched ALB Target Health",
+            "> Do NOT call get_alb_target_health — all ALB data is already here.",
+            "",
+            f"- **Total Targets:** {alb_health.get('total_targets', 0)}",
+            f"- **Healthy:** {alb_health.get('healthy_count', 0)}  |  **Unhealthy:** {alb_health.get('unhealthy_count', 0)}",
+            "",
+            "**Target breakdown:**",
+            json.dumps(alb_health.get("targets", []), indent=2),
             "",
         ]
 
@@ -767,6 +793,8 @@ def run_agent_investigation(
     similar_incidents: list[dict] | None = None,
     resolved_targets:  list[dict] | None = None,
     alb_meta:          dict | None = None,
+    ec2_analysis:      dict | None = None,
+    alb_health:        dict | None = None,
 ) -> dict:
     """
     Run the investigation for a single incident.
@@ -784,7 +812,8 @@ def run_agent_investigation(
     graph = build_agent_graph()
 
     initial_human = _build_initial_human_message(
-        incident_context, triage_result, rca_signals, timeline, similar_incidents, resolved_targets
+        incident_context, triage_result, rca_signals, timeline, similar_incidents,
+        resolved_targets, ec2_analysis, alb_health,
     )
 
     initial_state: AgentState = {
@@ -794,6 +823,8 @@ def run_agent_investigation(
         "rca_signals":     rca_signals,
         "resolved_targets": resolved_targets or [],
         "alb_meta":         alb_meta or {},
+        "ec2_analysis":     ec2_analysis or {},
+        "alb_health":       alb_health or {},
         "investigation_state": {
             "network_validated": False,
             "compute_validated": False,

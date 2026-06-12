@@ -229,7 +229,7 @@ def has_sufficient_evidence(
 def correlate_timeline(
     infra_events: list[dict],
     log_anchor_ts: str | None,
-    incident_down_time: str,
+    down_time: str,
     window_minutes: int = 15,
 ) -> dict:
     """
@@ -238,8 +238,8 @@ def correlate_timeline(
 
     infra_events: list of CloudTrail high_risk_events dicts with 'event_time' key.
     log_anchor_ts: ISO timestamp of first error in logs (from log anchor).
-    incident_down_time: ISO timestamp of monitor alert.
-    window_minutes: how many minutes before incident_down_time to look for triggers.
+    down_time: ISO timestamp of monitor alert.
+    window_minutes: how many minutes before down_time to look for triggers.
 
     Returns:
     {
@@ -252,9 +252,9 @@ def correlate_timeline(
     }
     """
     try:
-        down_dt = datetime.fromisoformat(incident_down_time.replace("Z", "+00:00"))
+        down_dt = datetime.fromisoformat(down_time.replace("Z", "+00:00"))
     except Exception:
-        return {"error": "Invalid incident_down_time format"}
+        return {"error": "Invalid down_time format"}
 
     cutoff = down_dt - timedelta(minutes=window_minutes)
     chain  = []

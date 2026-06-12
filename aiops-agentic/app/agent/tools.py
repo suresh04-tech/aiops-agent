@@ -1,22 +1,28 @@
 """
 app/agent/tools.py
 ──────────────────
-AWS investigation tools for the LangGraph agent (v4).
+AWS investigation tools for the LangGraph agent (v5).
 
-Changes in v4
+Changes in v5
 ─────────────
-Added infrastructure-level causal RCA tools:
-  - investigate_network_path: full EC2→DB network path investigation
-    (DNS, route tables, NACL, SG, port connectivity)
-  - get_security_group_rules: inspect SG inbound/outbound rules
-  - get_nacl_rules: inspect NACL rules for a subnet
-  - get_route_table: check route tables for a subnet/VPC
-  - check_cloudtrail_sg_changes: find recent SG modifications via CloudTrail
-    (who changed what and when — correlates with incident timeline)
+Moved deterministic infrastructure enrichment tools out of the LLM tool loop.
 
-These tools enable the agent to go beyond "database unreachable" and
-produce evidence like "Security Group sg-xxxxx blocked outbound TCP 5432,
-modified by user X at 09:24 UTC, 2 minutes before outage."
+  Removed from ALL_TOOLS (now plain Python functions, called in pre-enrichment):
+    - resolve_incident_targets  → called by _resolve_targets_deterministic()
+    - get_ec2_analysis          → called by _enrich_ec2_deterministic()
+    - get_alb_target_health     → called by _enrich_alb_deterministic()
+
+  Retained in ALL_TOOLS (context-dependent investigative tools):
+    - get_compressed_logs
+    - correlate_instances
+    - get_infra_events
+    - query_logs_insights
+    - investigate_network_path
+    - get_security_group_rules
+    - check_cloudtrail_sg_changes
+
+The LLM now receives full EC2 and ALB state in its first HumanMessage.
+It only uses tools for deeper investigation, not for gathering foundational facts.
 """
 
 import json
@@ -68,16 +74,18 @@ def _safe(fn, *args, **kwargs) -> dict:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# TOOL 1 — Resolve dependencies
+# PRE-ENRICHMENT 1 — Resolve dependencies
+# (plain Python function — NOT an agent tool; called by process_incident.py)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@tool
 def resolve_incident_targets() -> dict:
     """
     Resolve incident dependencies into concrete EC2 instance targets.
     Handles EC2 (type=ec2) and ALB (type=alb) dependencies.
     Returns targets list and ALB metadata.
-    Always call this first.
+
+    NOTE: This is a plain Python function — it is NOT exposed as an agent tool.
+    It is called deterministically in process_incident.py before the LLM starts.
     """
     from app.processor.dependency_resolver import resolve_dependencies
 
@@ -112,18 +120,21 @@ def resolve_incident_targets() -> dict:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# TOOL 2 — EC2 analysis (details + metrics, batched)
+# PRE-ENRICHMENT 2 — EC2 analysis (details + metrics, batched)
+# (plain Python function — NOT an agent tool; called by process_incident.py)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@tool
 def get_ec2_analysis(instance_ids: list[str], region: str = "",
                      window_minutes: int = 15) -> dict:
     """
-    Fetch EC2 details AND CloudWatch metrics for one or more instances in one
-    tool call.  Returns a dict keyed by instance_id with:
+    Fetch EC2 details AND CloudWatch metrics for one or more instances.
+    Returns a dict keyed by instance_id with:
       - details  (state, type, AZ, IPs, SGs, tags, subnet_id, vpc_id)
       - status_checks  (instance_status, system_status)
       - metrics  (CPU, network, disk, status_check_failed)
+
+    NOTE: This is a plain Python function — it is NOT exposed as an agent tool.
+    It is called deterministically in process_incident.py before the LLM starts.
 
     Args:
         instance_ids: e.g. ['i-0abc1234', 'i-0def5678']
@@ -234,16 +245,16 @@ def get_compressed_logs(log_groups: list[str], region: str = "") -> dict:
     row    = _incident()
     region = region or _region()
 
-    down_time_raw = row.get("incident_down_time")
+    down_time_raw = row.get("down_time")
     if not down_time_raw:
-        return {"error": "incident_down_time missing from incident record"}
+        return {"error": "down_time missing from incident record"}
 
     if isinstance(down_time_raw, str):
         down_time = datetime.fromisoformat(down_time_raw.replace("Z", "+00:00"))
     elif isinstance(down_time_raw, datetime):
         down_time = down_time_raw if down_time_raw.tzinfo else down_time_raw.replace(tzinfo=timezone.utc)
     else:
-        return {"error": f"Unrecognised incident_down_time type: {type(down_time_raw)}"}
+        return {"error": f"Unrecognised down_time type: {type(down_time_raw)}"}
 
     logs_client = _factory().get_client("logs", region_name=region)
 
@@ -251,7 +262,7 @@ def get_compressed_logs(log_groups: list[str], region: str = "") -> dict:
         return fetch_and_compress_logs(
             logs_client=logs_client,
             log_groups=[g for g in log_groups if g],
-            incident_down_time=down_time,
+            down_time=down_time,
             severity="medium",
             issue=row.get("down_message", ""),
             dependency_context={},
@@ -346,16 +357,16 @@ def get_infra_events(instance_id: str, region: str = "") -> dict:
     row    = _incident()
     region = region or _region()
 
-    down_time_raw = row.get("incident_down_time")
+    down_time_raw = row.get("down_time")
     if not down_time_raw:
-        return {"error": "incident_down_time missing"}
+        return {"error": "down_time missing"}
 
     if isinstance(down_time_raw, str):
         down_time = datetime.fromisoformat(down_time_raw.replace("Z", "+00:00"))
     elif isinstance(down_time_raw, datetime):
         down_time = down_time_raw if down_time_raw.tzinfo else down_time_raw.replace(tzinfo=timezone.utc)
     else:
-        return {"error": "Unrecognised incident_down_time type"}
+        return {"error": "Unrecognised down_time type"}
 
     ct_client = _factory().get_client("cloudtrail", region_name=region)
 
@@ -381,13 +392,16 @@ def get_infra_events(instance_id: str, region: str = "") -> dict:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# TOOL 6 — ALB target health
+# PRE-ENRICHMENT 3 — ALB target health
+# (plain Python function — NOT an agent tool; called by process_incident.py)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-@tool
 def get_alb_target_health(alb_dns_or_arn: str, region: str = "") -> dict:
     """
     Check ALB target health for all registered targets.
+
+    NOTE: This is a plain Python function — it is NOT exposed as an agent tool.
+    It is called deterministically in process_incident.py before the LLM starts.
 
     Args:
         alb_dns_or_arn: ALB DNS name or ARN
@@ -463,7 +477,7 @@ def query_logs_insights(log_groups: list[str], query: str,
     logs_client = _factory().get_client("logs", region_name=region)
 
     row           = _incident()
-    down_time_raw = row.get("incident_down_time")
+    down_time_raw = row.get("down_time")
     if isinstance(down_time_raw, str):
         ref = datetime.fromisoformat(down_time_raw.replace("Z", "+00:00"))
     elif isinstance(down_time_raw, datetime):
@@ -874,16 +888,16 @@ def check_cloudtrail_sg_changes(
     ct     = _factory().get_client("cloudtrail", region_name=region)
     row    = _incident()
 
-    down_time_raw = row.get("incident_down_time")
+    down_time_raw = row.get("down_time")
     if not down_time_raw:
-        return {"error": "incident_down_time missing"}
+        return {"error": "down_time missing"}
 
     if isinstance(down_time_raw, str):
         down_time = datetime.fromisoformat(down_time_raw.replace("Z", "+00:00"))
     elif isinstance(down_time_raw, datetime):
         down_time = down_time_raw if down_time_raw.tzinfo else down_time_raw.replace(tzinfo=timezone.utc)
     else:
-        return {"error": "Unrecognised incident_down_time type"}
+        return {"error": "Unrecognised down_time type"}
 
     start_time = down_time - timedelta(minutes=lookback_minutes)
     end_time   = down_time + timedelta(minutes=5)  # small buffer after incident
@@ -989,16 +1003,18 @@ def check_cloudtrail_sg_changes(
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Tool list exported for the agent
+# Agent tool registry
+# ═══════════════════════════════════════════════════════════════════════════════
+# Only investigative tools — called by the LLM when deeper analysis is needed.
+# Deterministic enrichment tools (resolve_incident_targets, get_ec2_analysis,
+# get_alb_target_health) are plain Python functions called before the agent
+# starts and are intentionally excluded here.
 # ═══════════════════════════════════════════════════════════════════════════════
 
 ALL_TOOLS = [
-    resolve_incident_targets,
-    get_ec2_analysis,
     get_compressed_logs,
     correlate_instances,
     get_infra_events,
-    get_alb_target_health,
     query_logs_insights,
     investigate_network_path,
     get_security_group_rules,

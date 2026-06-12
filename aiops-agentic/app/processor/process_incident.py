@@ -37,6 +37,8 @@ from app.utils.invocation_logger import get_rca_logger, invocation_log_context
 from app.agent.tools import (
     init_tools,
     resolve_incident_targets,
+    get_ec2_analysis,
+    get_alb_target_health,
 )
 from app.agent.evaluators import (
     pre_triage_targets,
@@ -278,7 +280,7 @@ def _resolve_targets_deterministic() -> tuple[list[dict], dict | None, dict]:
     Returns (targets, triage_result, alb_meta).
     """
     try:
-        result = resolve_incident_targets.invoke({})
+        result = resolve_incident_targets()
         targets       = result.get("targets", [])
         alb_meta      = result.get("alb_meta", {})
         triage_info   = pre_triage_targets(targets)
@@ -301,6 +303,56 @@ def _resolve_targets_deterministic() -> tuple[list[dict], dict | None, dict]:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# EC2 deterministic pre-enrichment
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _enrich_ec2_deterministic(targets: list[dict]) -> dict:
+    """
+    Pre-fetch EC2 analysis (state, status checks, metrics) for all resolved
+    targets before the LLM starts.  Saves 1 LLM + Bedrock round-trip by
+    embedding foundational EC2 facts in the initial HumanMessage.
+
+    Returns the raw ec2_analysis dict as returned by get_ec2_analysis():
+      {"instances": {"i-xxx": {details, status_checks, metrics}}, "findings": []}
+    """
+    instance_ids = [t["instance_id"] for t in targets if t.get("instance_id")]
+    if not instance_ids:
+        logger.info("[PreEnrich] No EC2 instance IDs to enrich")
+        return {}
+    try:
+        result = get_ec2_analysis(instance_ids=instance_ids)
+        logger.info(f"[PreEnrich] EC2 analysis fetched for {instance_ids}")
+        return result
+    except Exception as exc:
+        logger.warning(f"[PreEnrich] EC2 analysis failed: {exc}")
+        return {}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ALB deterministic pre-enrichment
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _enrich_alb_deterministic(alb_meta: dict) -> dict:
+    """
+    Pre-fetch full ALB target health (per target-group breakdown) if the
+    incident involves an ALB dependency.  Provides richer health data than
+    the alb_meta already captured during dependency resolution.
+
+    Returns the raw get_alb_target_health() result dict, or {} if no ALB.
+    """
+    # alb_arn is available from dependency resolution; fall back to dns
+    alb_arn = alb_meta.get("alb_arn") or alb_meta.get("alb_dns")
+    if not alb_arn:
+        return {}
+    try:
+        result = get_alb_target_health(alb_dns_or_arn=alb_arn)
+        logger.info(f"[PreEnrich] ALB health fetched for {alb_arn}")
+        return result
+    except Exception as exc:
+        logger.warning(f"[PreEnrich] ALB health fetch failed: {exc}")
+        return {}
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # P2 — Pre-extract RCA signals before first LLM invoke
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -308,12 +360,12 @@ def _pre_extract_signals(
     targets: list[dict],
     triage_result: dict | None,
     incident_context: dict,
+    ec2_analysis: dict | None = None,
 ) -> dict:
     """
     Run extract_rca_signals() on whatever we know BEFORE the LLM starts:
       - ALB target reasons from resolved targets
-      - EC2 state if triage has instance info (state not yet known here,
-        but ALB reasons like Target.InvalidState strongly imply stopped)
+      - EC2 state from pre-fetched ec2_analysis (now available before LLM)
       - down_message text scanned for known error patterns
 
     Returns the signals dict to embed in the initial HumanMessage.
@@ -327,9 +379,21 @@ def _pre_extract_signals(
     down_message = incident_context.get("down_message") or ""
     log_samples  = [down_message] if down_message else []
 
+    # Extract real EC2 state from pre-fetched analysis (first instance wins as
+    # primary signal; multi-instance scenarios are handled by correlate_instances)
+    ec2_state: str | None = None
+    if ec2_analysis:
+        instances = ec2_analysis.get("instances", {})
+        for iid, data in instances.items():
+            state = data.get("details", {}).get("state")
+            if state:
+                ec2_state = state
+                logger.info(f"[PreSignals] Using pre-fetched EC2 state={state} for {iid}")
+                break
+
     signals = extract_rca_signals(
         log_samples=log_samples,
-        ec2_state=None,              # not yet known — will be updated in tool_node
+        ec2_state=ec2_state,
         alb_target_reasons=alb_reasons,
     )
 
@@ -416,7 +480,7 @@ def process_incident(payload: dict) -> None:
             "monitor_type":       incident.get("monitor_type"),
             "monitor_url":        incident.get("monitor_url"),
             "down_message":       incident.get("down_message"),
-            "incident_down_time": str(incident.get("incident_down_time")),
+            "down_time": str(incident.get("down_time")),
             "aws_region":         project.get("aws_region"),
             "dependencies":       final_deps,
         }
@@ -445,11 +509,26 @@ def process_incident(payload: dict) -> None:
         # ── 6. P4: triage_started ─────────────────────────────────────────────
         _update_status(incident_id, "triage_started")
 
-        # ── 7. Deterministic pre-resolve ──────────────────────────────────────
+        # ── 7. Deterministic pre-resolve ─────────────────────────────────────────────────
         targets, triage_result, alb_meta = _resolve_targets_deterministic()
 
-        # ── 8. P2: Pre-extract RCA signals ────────────────────────────────────
-        rca_signals = _pre_extract_signals(targets, triage_result, investigation_context)
+        # ── 7b. Deterministic EC2 enrichment ──────────────────────────────────────────
+        ec2_analysis: dict = {}
+        if targets:
+            ec2_analysis = _enrich_ec2_deterministic(targets)
+            log.info(f"[PreEnrich] EC2 enrichment complete: {list(ec2_analysis.get('instances', {}).keys())}")
+
+        # ── 7c. Deterministic ALB enrichment (only if ALB dep) ─────────────────
+        alb_health: dict = {}
+        if alb_meta:
+            alb_health = _enrich_alb_deterministic(alb_meta)
+            if alb_health:
+                log.info(f"[PreEnrich] ALB health enrichment complete: {alb_health.get('total_targets')} targets")
+
+        # ── 8. P2: Pre-extract RCA signals ──────────────────────────────────────────
+        rca_signals = _pre_extract_signals(
+            targets, triage_result, investigation_context, ec2_analysis
+        )
 
         # ── 9. P8: Similar incident lookup ────────────────────────────────────
         primary_rca_type = (
@@ -478,12 +557,20 @@ def process_incident(payload: dict) -> None:
             timeline = correlate_timeline(
                 infra_events=[],
                 log_anchor_ts=None,
-                incident_down_time=investigation_context["incident_down_time"],
+                down_time=investigation_context["down_time"],
             )
         except Exception as exc:
             log.warning(f"[Timeline] Pre-build failed: {exc}")
 
-        # ── 12. Run the agent ─────────────────────────────────────────────────
+        # ── 12. Run the agent ──────────────────────────────────────────────────────
+        log.info(
+            f"[AgentInput] Starting investigation for {incident_id}. Inputs passed to LLM: "
+            f"incident_context={investigation_context}, triage_result={triage_result}, "
+            f"rca_signals={rca_signals}, timeline={timeline}, "
+            f"similar_incidents={similar_incidents}, resolved_targets={targets}, "
+            f"alb_meta={alb_meta}, ec2_analysis={ec2_analysis}, alb_health={alb_health}"
+        )
+
         result = run_agent_investigation(
             incident_id=incident_id,
             incident_context=investigation_context,
@@ -493,6 +580,8 @@ def process_incident(payload: dict) -> None:
             similar_incidents=similar_incidents,
             resolved_targets=targets,
             alb_meta=alb_meta,
+            ec2_analysis=ec2_analysis,
+            alb_health=alb_health,
         )
 
         structured = result.get("structured_result")

@@ -35,7 +35,7 @@ Call fetch_infra_context() from process_incident.py after fetching logs:
     infra_ctx = fetch_infra_context(
         region          = region,
         instance_id     = instance_id,
-        down_time       = incident_down_time,
+        down_time       = down_time,
         anchor          = log_data["anchor"],
         severity        = severity,
         issue           = issue,

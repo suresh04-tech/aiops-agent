@@ -148,7 +148,7 @@ class AWSClientFactory:
 
     def _validate_client(self, client, service_name: str):
         if service_name == 'cloudwatch':
-            client.list_metrics(MaxResults=1)
+            client.list_metrics()
             logger.info("[AWSClientFactory] CloudWatch permission validation succeeded.")
         elif service_name == 'ec2':
             client.describe_regions()

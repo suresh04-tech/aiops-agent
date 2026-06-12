@@ -199,7 +199,7 @@ Monitor Name    : {incident.get('monitor_name', 'N/A')}
 Monitor Type    : {incident.get('monitor_type', 'N/A')}
 Monitor URL     : {incident.get('monitor_url', 'N/A')}
 Down Message    : {incident.get('down_message', 'N/A')}
-Down Time       : {incident.get('incident_down_time', 'N/A')}
+Down Time       : {incident.get('down_time', 'N/A')}
 Project Tag     : {incident.get('project_tag', 'N/A')}
 Analysis Status : {incident.get('analysis_status', 'N/A')}
 
