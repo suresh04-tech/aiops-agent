@@ -256,15 +256,13 @@ def _validate_incident(incident: dict | None, incident_id: str) -> str | None:
     if not incident:
         return f"Incident {incident_id} not found in DB"
     if not incident.get("down_time"):
-        return f"Missing incident down_time for {incident_id}"
+        return f"Missing incident down_time"
     return None
 
 
 def _validate_project(project: dict | None, project_tag: str, incident_id: str) -> str | None:
     if not project:
         return f"No project found with tag '{project_tag}' for incident {incident_id}"
-    if not project.get("aws_access_key_id") or not project.get("aws_secret_access_key"):
-        return f"Project '{project_tag}' has no AWS credentials for incident {incident_id}"
     return None
 
 
@@ -425,7 +423,7 @@ def process_incident(payload: dict) -> None:
 
         if not final_deps:
             log.error(f"[Validate] No dependencies for {incident_id}")
-            _update_status(incident_id, "failed", message=f"No dependencies for {incident_id}")
+            _update_status(incident_id, "failed", message=f"This project has no attached dependencies")
             return
 
         # ── 4. Build AWS factory ──────────────────────────────────────────────

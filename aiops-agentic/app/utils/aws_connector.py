@@ -163,7 +163,7 @@ class AWSClientFactory:
 
 class BedrockClientFactory:
     """
-    Factory to create a boto3 bedrock-runtime client using credentials from
+    Factory to create a boto3 bedrock-runtime client using IAM role or credentials from
     meyiconnect.insight_settings.
 
     Separate from AWSClientFactory so project-level AWS creds and
@@ -171,6 +171,19 @@ class BedrockClientFactory:
     """
 
     def __init__(self):
+        self.use_role = False
+        
+        session = boto3.Session()
+        credentials = session.get_credentials()
+        
+        if credentials:
+            logger.info("[BedrockClientFactory] IAM role detected.")
+            logger.info("[BedrockClientFactory] Using IAM role credentials.")
+            self.use_role = True
+        else:
+            logger.info("[BedrockClientFactory] IAM role unavailable.")
+            logger.info("[BedrockClientFactory] Falling back to database credentials.")
+            
         self._load_settings()
 
     def _load_settings(self) -> None:
@@ -188,28 +201,40 @@ class BedrockClientFactory:
                 row = cur.fetchone()
 
         if not row:
-            raise ValueError("No settings found in insight_settings table")
+            if not self.use_role:
+                raise ValueError("No settings found in insight_settings table")
+            else:
+                self.region = "us-east-1"
+                return
 
-        self.access_key = row["aws_bedrock_access_key_id"]
-        self.secret_key = row["aws_bedrock_secret_access_key"]
-        self.region     = row["aws_bedrock_region"] or "us-east-1"
+        self.region = row["aws_bedrock_region"] or "us-east-1"
 
-        if not self.access_key or not self.secret_key:
-            raise ValueError(
-                "Bedrock credentials (aws_bedrock_access_key_id / "
-                "aws_bedrock_secret_access_key) not configured in insight_settings"
+        if not self.use_role:
+            self.access_key = row["aws_bedrock_access_key_id"]
+            self.secret_key = row["aws_bedrock_secret_access_key"]
+
+            if not self.access_key or not self.secret_key:
+                raise ValueError(
+                    "Bedrock credentials (aws_bedrock_access_key_id / "
+                    "aws_bedrock_secret_access_key) not configured in insight_settings"
+                )
+
+            logger.info(
+                f"[BedrockClientFactory] Loaded Bedrock credentials "
+                f"region={self.region}"
             )
 
-        logger.info(
-            f"[BedrockClientFactory] Loaded Bedrock credentials "
-            f"region={self.region}"
-        )
-
     def get_bedrock_runtime_client(self):
-        """Return a boto3 bedrock-runtime client using insight_settings creds."""
-        return boto3.client(
-            "bedrock-runtime",
-            region_name=self.region,
-            aws_access_key_id=self.access_key,
-            aws_secret_access_key=self.secret_key,
-        )
+        """Return a boto3 bedrock-runtime client using insight_settings creds or IAM role."""
+        if self.use_role:
+            return boto3.client(
+                "bedrock-runtime",
+                region_name=self.region,
+            )
+        else:
+            return boto3.client(
+                "bedrock-runtime",
+                region_name=self.region,
+                aws_access_key_id=self.access_key,
+                aws_secret_access_key=self.secret_key,
+            )
